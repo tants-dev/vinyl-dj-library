@@ -23,3 +23,16 @@ def test_index_with_empty_db(session, client):
     resp = client.get("/")
     assert resp.status_code == 200
     assert "0 track(s) need BPM/key" in resp.text
+
+
+def test_search_form_handles_enter_key_via_htmx_not_native_submit(session, client):
+    # Regression test: the #controls form has hx-get but used to declare an
+    # explicit hx-trigger that didn't include "submit". That overrides
+    # htmx's default form trigger entirely (rather than adding to it), so
+    # pressing Enter fell through to a native browser form submission --
+    # a full-page GET to "/" (no action= set) that ignores q/year/genre/
+    # artist entirely, which looked like the search being cleared. "submit"
+    # must be explicitly listed in hx-trigger for htmx to intercept Enter.
+    resp = client.get("/")
+    assert 'hx-trigger="input changed delay:200ms from:input[name=\'q\']' in resp.text
+    assert "submit" in resp.text.split('hx-trigger="')[1].split('"')[0]
