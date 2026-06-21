@@ -52,7 +52,11 @@ def enrich_unmatched_tracks(session: Session) -> int:
 
     enriched = 0
     for track in tracks:
-        match = _find_match(track.artists or "", track.title)
+        # Most vinyl isn't a various-artists compilation, so Track.artists
+        # is None and the real credit lives on the release (same fallback
+        # api/routes/search.py already uses for display).
+        artist = track.artists or (track.release.artists if track.release else "")
+        match = _find_match(artist or "", track.title)
         if not match:
             continue
         session.add(

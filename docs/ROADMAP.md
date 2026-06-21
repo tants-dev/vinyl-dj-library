@@ -16,11 +16,11 @@ Goal: have everything needed to start pulling real data.
 
 Goal: your real vinyl collection lives in the local database.
 
-- [ ] `sync/discogs_sync.py` pulls collection releases + full tracklists into SQLite.
-- [ ] Sync is idempotent and re-runnable (upsert, not duplicate).
-- [ ] Rate-limit handling for Discogs' 60 req/min cap.
-- [ ] Manual trigger (CLI command or script) to run a sync.
-- [ ] Spot-check: sync your real collection once, confirm release/track counts look right.
+- [x] `sync/discogs_sync.py` pulls collection releases + full tracklists into SQLite.
+- [x] Sync is idempotent and re-runnable (upsert, not duplicate) — Release matched by Discogs id, Track matched by (release_id, position) specifically so a re-sync never orphans a previously-enriched track's `BpmKeyData` by issuing it a new row id. Verified with a regression test.
+- [x] Rate-limit handling for Discogs' 60 req/min cap — fixed 1.1s delay between requests (simpler and robust enough at this scale vs. parsing the `X-Discogs-Ratelimit-*` headers).
+- [x] Manual trigger — the existing "Sync Discogs" button in the UI (`POST /sync`) now does the real thing instead of a stub.
+- [x] Spot-check: synced the real collection — 42 releases, 348 tracks, all fields (artist credits incl. multi-artist joins, label, catalog #, year, format, cover art) verified correct against live API responses.
 
 ## Phase 2 — BPM/key enrichment pipeline
 
@@ -30,7 +30,7 @@ Goal: tracks get BPM/key automatically, with provenance tracked.
 - [x] GetSongBPM source adapter (`enrich/sources/getsongbpm.py`) — implemented and verified live against the real API with a real key (deadmau5 - Strobe, Daft Punk - One More Time, both matched correctly). Searches by title only and matches artist client-side (exact, normalized) — the API doesn't support server-side artist filtering despite what the docs imply.
 - [x] Pipeline tries sources in priority order, stores `source` + `confidence` per [ADR-003](DECISIONS.md#adr-003-tiered-bpmkey-data-strategy--beatport-primary-getsongbpm-fallback-local-audio-analysis-last-resort-manual-override-always-available). Also now resilient to a single source erroring mid-batch (logs and moves on instead of aborting the rest of the tracks).
 - [ ] Negative-result caching so dead-end lookups aren't repeated every run.
-- [ ] Run against the real synced collection, eyeball match-rate and accuracy across the whole library. GetSongBPM itself is confirmed working; this item is now only blocked on Phase 1 (Discogs sync) landing.
+- [x] Run against the real synced collection, eyeball match-rate and accuracy across the whole library. **111/348 tracks (~32%) matched** against the real 42-release collection. Spot-checked outliers (e.g. a 200 BPM result) against the raw API directly to rule out a matching bug — confirmed it's genuinely what GetSongBPM has on file (likely their own half/double-time tempo-detection ambiguity, a known characteristic of crowd-sourced BPM data), not a false match. See [ARCHITECTURE_CURRENT.md](ARCHITECTURE_CURRENT.md) for the real bug this run uncovered and fixed (artist fallback).
 
 ## Phase 3 — Local search & web UI
 

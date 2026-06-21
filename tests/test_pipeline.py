@@ -72,3 +72,60 @@ def test_no_configured_sources_enriches_nothing(session, monkeypatch):
     monkeypatch.setattr(pipeline, "SOURCES_IN_PRIORITY_ORDER", [unconfigured])
 
     assert pipeline.enrich_unmatched_tracks(session) == 0
+
+
+def test_falls_back_to_release_artist_when_track_has_none(session, monkeypatch):
+    # Regression test: most vinyl isn't a various-artists compilation, so
+    # Track.artists is None and the real credit only lives on the release
+    # (see api/routes/search.py, which already falls back this way for
+    # display). The pipeline used to pass an empty string in this case,
+    # silently failing every lookup against the real GetSongBPM API even
+    # though the artist was known via the release.
+    session.add(Release(id=99, title="Some Release", artists="The Real Artist"))
+    session.commit()
+    track = Track(release_id=99, position="A1", title="Some Track")
+    session.add(track)
+    session.commit()
+    session.refresh(track)
+
+    captured_artist = {}
+
+    def capture(artist, title):
+        from enrich.sources.base import Match
+
+        captured_artist["value"] = artist
+        return Match(bpm=120.0, key="C major", source="fake_source")
+
+    source = _FakeSource(configured=True, behavior=capture)
+    monkeypatch.setattr(pipeline, "SOURCES_IN_PRIORITY_ORDER", [source])
+
+    pipeline.enrich_unmatched_tracks(session)
+
+    assert captured_artist["value"] == "The Real Artist"
+
+
+def test_uses_track_artist_over_release_artist_when_both_present(session, monkeypatch):
+    # Compilation case: a track can have its own distinct artist credit.
+    session.add(Release(id=98, title="Various Artists Comp", artists="Various"))
+    session.commit()
+    track = Track(
+        release_id=98, position="A1", title="Some Track", artists="The Track Artist"
+    )
+    session.add(track)
+    session.commit()
+    session.refresh(track)
+
+    captured_artist = {}
+
+    def capture(artist, title):
+        from enrich.sources.base import Match
+
+        captured_artist["value"] = artist
+        return Match(bpm=120.0, key="C major", source="fake_source")
+
+    source = _FakeSource(configured=True, behavior=capture)
+    monkeypatch.setattr(pipeline, "SOURCES_IN_PRIORITY_ORDER", [source])
+
+    pipeline.enrich_unmatched_tracks(session)
+
+    assert captured_artist["value"] == "The Track Artist"
