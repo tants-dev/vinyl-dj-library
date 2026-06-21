@@ -14,18 +14,37 @@
   </div>
   <div id="status-message"></div>
 
-  <input
-    type="search"
-    name="q"
-    placeholder="Search artist, title, label, catalog #..."
-    autofocus
+  <form
+    id="controls"
     hx-get="/search"
-    hx-trigger="input changed delay:200ms, search"
     hx-target="#results"
     hx-swap="innerHTML"
+    hx-sync="#results:replace"
+    hx-trigger="input changed delay:200ms from:input[name='q'], change from:select[name='year'], change from:select[name='genre'], change from:select[name='artist']"
   >
+    <input
+      type="search"
+      name="q"
+      placeholder="Search artist, title, label, catalog #..."
+      autofocus
+    >
+    <div class="filter-bar">
+      <select name="year">
+        <option value="">Any year</option>
+        {% for y in filter_options.years %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+      </select>
+      <select name="genre">
+        <option value="">Any genre</option>
+        {% for g in filter_options.genres %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+      </select>
+      <select name="artist">
+        <option value="">Any artist</option>
+        {% for a in filter_options.artists %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+      </select>
+    </div>
+  </form>
 
   <div id="results">
-    <p class="empty-state">Start typing to search your collection.</p>
+    {% include "partials/release_list.html" %}
   </div>
 {% endblock %}

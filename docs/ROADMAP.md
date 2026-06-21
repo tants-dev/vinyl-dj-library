@@ -55,10 +55,11 @@ Goal: cover the records that no database has — white labels, promos, dubplates
 
 Goal: make it genuinely nice to use at the decks, not just functional.
 
-- [ ] Filter/sort by BPM range and by Camelot-compatible keys (harmonic mixing helper).
-- [ ] "Last synced" / "N tracks need enrichment" status visible in UI.
-- [ ] Sync/enrich triggerable from the UI, not just CLI.
-- [ ] Large-type, glanceable layout tuned for tablet-at-the-decks use.
+- [x] Browsable list of all releases shown by default (before any search), filterable by year/genre/artist via dropdowns populated from the actual collection. Clicking a release opens the full release page; clicking a track from search results opens that track featured at the top (with its own manual-entry form immediately visible, no scrolling) with the full release underneath. None of the Discogs metadata shown (label, year, format, genres, styles) is clickable — confirmed live, the only link on the page is "back to search".
+- [ ] Filter/sort by BPM range and by Camelot-compatible keys (harmonic mixing helper) — different from the year/genre/artist browse filters above, not yet built.
+- [ ] "Last synced" status visible in UI — `Release.discogs_synced_at` is stored per-release but there's no aggregate display yet; `unenriched_count` ("N tracks need BPM/key") is shown.
+- [x] Sync/enrich triggerable from the UI — the "Sync Discogs" / "Enrich BPM/key" buttons have worked since the skeleton; both are now fully functional against real data.
+- [ ] Large-type, glanceable layout tuned for tablet-at-the-decks use — works fine on a 768px tablet viewport today; not yet deliberately tuned for legibility-at-a-glance.
 
 ## Stretch / future ideas (not committed)
 

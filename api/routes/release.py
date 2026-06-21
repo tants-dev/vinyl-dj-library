@@ -23,5 +23,5 @@ def release_detail(
     return request.app.state.templates.TemplateResponse(
         request,
         "release.html",
-        {"release": release, "tracks": tracks},
+        {"release": release, "tracks": tracks, "featured_track": None},
     )

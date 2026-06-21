@@ -1,10 +1,12 @@
-<div class="bpm-key" id="bpm-key-{{ track.id }}">
+{% set editable = editable if editable is defined else true %}
+<div class="bpm-key" {% if editable %}id="bpm-key-{{ track.id }}"{% endif %}>
   {% if track.bpm_key and track.bpm_key.bpm %}
     <div class="bpm">{{ "%.0f"|format(track.bpm_key.bpm) }}</div>
     <div class="key">{{ track.bpm_key.camelot_key or track.bpm_key.key or "" }} &middot; {{ track.bpm_key.source }}</div>
   {% else %}
     <div class="key">no BPM/key yet</div>
   {% endif %}
+  {% if editable %}
   <form
     class="edit-form"
     hx-patch="/track/{{ track.id }}/bpm-key"
@@ -29,4 +31,5 @@
     >
     <button type="submit">Save</button>
   </form>
+  {% endif %}
 </div>

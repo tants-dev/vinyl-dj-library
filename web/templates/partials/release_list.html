@@ -1,0 +1,15 @@
+{% if not releases %}
+  <p class="empty-state">No releases match these filters.</p>
+{% else %}
+  {% for r in releases %}
+    <a class="result-row" href="/release/{{ r.id }}" style="text-decoration:none;color:inherit;">
+      {% if r.cover_image_url %}
+        <img src="{{ r.cover_image_url }}" alt="">
+      {% endif %}
+      <div class="result-meta">
+        <div class="track-title">{{ r.artists }} &mdash; {{ r.title }}</div>
+        <div class="release-title">{{ r.label or "" }} {{ r.catalog_number or "" }} &middot; {{ r.year or "" }}</div>
+      </div>
+    </a>
+  {% endfor %}
+{% endif %}

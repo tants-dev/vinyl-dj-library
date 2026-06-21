@@ -1,10 +1,8 @@
 {% if not results %}
-  <p class="empty-state">
-    {% if query %}No matches for "{{ query }}".{% else %}Start typing to search your collection.{% endif %}
-  </p>
+  <p class="empty-state">No matches for "{{ query }}".</p>
 {% else %}
   {% for r in results %}
-    <a class="result-row" href="/release/{{ r.release_id }}" style="text-decoration:none;color:inherit;">
+    <a class="result-row" href="/track/{{ r.track_id }}" style="text-decoration:none;color:inherit;">
       {% if r.cover_image_url %}
         <img src="{{ r.cover_image_url }}" alt="">
       {% endif %}

@@ -11,6 +11,7 @@ from sqlmodel import Session, func, select
 from db.models import Track
 from db.session import get_session, init_db
 from api.routes import enrich, release, search, sync, system, track
+from api.routes.search import browse_releases, get_filter_options
 
 load_dotenv()
 
@@ -49,5 +50,7 @@ def index(request: Request, session: Session = Depends(get_session)):
         {
             "last_synced": None,
             "unenriched_count": unenriched_count,
+            "releases": browse_releases(session),
+            "filter_options": get_filter_options(session),
         },
     )

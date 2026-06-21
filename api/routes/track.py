@@ -1,6 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlmodel import Session
 
@@ -14,6 +15,22 @@ router = APIRouter()
 class BpmKeyUpdate(BaseModel):
     bpm: Optional[float] = None
     key: Optional[str] = None
+
+
+@router.get("/track/{track_id}", response_class=HTMLResponse)
+def track_detail(track_id: int, request: Request, session: Session = Depends(get_session)):
+    track = session.get(Track, track_id)
+    if not track:
+        raise HTTPException(status_code=404, detail="Track not found")
+
+    release = track.release
+    tracks = sorted(release.tracks, key=lambda t: t.position)
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "release.html",
+        {"release": release, "tracks": tracks, "featured_track": track},
+    )
 
 
 @router.patch("/track/{track_id}/bpm-key")

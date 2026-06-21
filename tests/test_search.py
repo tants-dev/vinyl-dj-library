@@ -74,10 +74,17 @@ def test_search_no_match(session, client):
     assert "No matches" in resp.text
 
 
-def test_search_empty_query_shows_prompt(session, client):
+def test_search_empty_query_shows_browsable_release_list(session, client):
     seed(session)
     resp = client.get("/search", params={"q": ""})
-    assert "Start typing" in resp.text
+    assert "Strictly Rhythm Classics" in resp.text
+    assert 'href="/release/1"' in resp.text
+
+
+def test_search_result_links_to_track_not_release(session, client):
+    _, track = seed(session)
+    resp = client.get("/search", params={"q": "Music Is The Answer"})
+    assert f'href="/track/{track.id}"' in resp.text
 
 
 def test_search_track_without_bpm_key_shows_placeholder(session, client):

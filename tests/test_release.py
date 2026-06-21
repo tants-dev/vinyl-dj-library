@@ -10,6 +10,9 @@ def test_release_detail_shows_tracks(session, client):
             label="Test Label",
             catalog_number="TL001",
             year=1995,
+            format="Vinyl",
+            genres="Electronic",
+            styles="House",
         )
     )
     session.commit()
@@ -32,6 +35,20 @@ def test_release_detail_shows_tracks(session, client):
     assert "Track Two" in resp.text
     assert "140" in resp.text
     assert "no BPM/key yet" in resp.text  # Track Two has none
+    assert "Electronic" in resp.text
+    assert "House" in resp.text
+    assert "Vinyl" in resp.text
+
+
+def test_release_detail_has_no_featured_track_block(session, client):
+    session.add(Release(id=1, title="Test Release", artists="Test Artist"))
+    session.commit()
+    session.add(Track(release_id=1, position="A1", title="Track One"))
+    session.commit()
+
+    resp = client.get("/release/1")
+
+    assert "featured-track" not in resp.text
 
 
 def test_release_not_found_returns_404(session, client):

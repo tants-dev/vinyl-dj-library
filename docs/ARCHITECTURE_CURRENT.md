@@ -22,15 +22,28 @@ vinyl-dj-library/
   api/
     main.py            -- FastAPI app, mounts routers + static files, renders index page
     routes/
-      search.py         -- GET /search (htmx partial, queries local SQLite)
-      release.py        -- GET /release/{id}
+      search.py         -- GET /search (htmx partial, queries local SQLite). Branches on
+                              whether q is empty: empty -> browse_releases() (the default
+                              release list, filterable by year/genre/artist via query
+                              params); non-empty -> track-level search as before, now
+                              linking each result to /track/{id} instead of /release/{id}.
+                              year is accepted as a raw string and parsed manually, not
+                              as Optional[int] -- FastAPI 422s on year="" (an unselected
+                              <select> submits empty string, not an absent param), a real
+                              bug only caught by testing the actual route, not by calling
+                              browse_releases() directly in tests.
+      release.py        -- GET /release/{id} (full release page, no featured track)
+      track.py            -- GET /track/{id} (same release.html template, with that one
+                              track passed as featured_track so it renders prominently at
+                              the top with its own manual-entry form, full release/
+                              tracklist underneath); PATCH /track/{id}/bpm-key (manual
+                              override, fully functional)
       sync.py            -- POST /sync (wired to sync/discogs_sync.py, fully functional;
                               catches httpx.HTTPError so a Discogs failure shows a
                               message instead of a 500)
       enrich.py          -- POST /enrich (wired to enrich/pipeline.py, fully functional;
                               message text reflects whether any source is actually
                               configured, not a hardcoded "not configured" string)
-      track.py            -- PATCH /track/{id}/bpm-key (manual override, fully functional)
       system.py            -- POST /shutdown (self-SIGTERM, for the UI Quit button)
   sync/
     discogs_sync.py   -- fully implemented and verified against the real account
@@ -76,10 +89,18 @@ vinyl-dj-library/
                               table.
     audio_analysis.py  -- stub, Phase 4, requires optional 'audio' extra (librosa)
   web/
-    templates/          -- Jinja2: base, index (search page), release detail, results partial
+    templates/          -- Jinja2: base, index (browsable release list + filters + search),
+                              release detail (also doubles as the track-detail page when a
+                              featured_track is passed)
       partials/
-        bpm_key_cell.html -- shared BPM/key display + inline edit form, used in release.html
-                              and as the htmx swap response from PATCH /track/{id}/bpm-key
+        bpm_key_cell.html -- shared BPM/key display + inline edit form. Takes an optional
+                              editable flag (defaults true) so the same track's BPM/key can
+                              be rendered twice on the track-detail page (once prominently
+                              featured, once in its normal tracklist position) without a
+                              duplicate DOM id or two htmx-editable forms targeting the same
+                              element — only the featured instance is editable/has an id.
+        release_list.html  -- the browsable release list (used both for the index page's
+                              default view and the filtered /search?q= response)
     static/
       htmx.min.js        -- vendored locally (not a CDN reference) so search stays offline
       htmx-json-enc.js    -- vendored htmx extension, lets the edit form POST JSON bodies
@@ -89,11 +110,12 @@ vinyl-dj-library/
 
 A "Quit" button is fixed in the top-right corner on every page (added to `base.html`), confirms before firing, and POSTs to `/shutdown`.
 
-**Tests:** `tests/` has 135 pytest cases covering everything with real logic — `enrich/camelot.py` (exhaustive Camelot wheel mapping), `enrich/sources/getsongbpm.py` (request shape — title-only search, since the API doesn't filter by artist server-side; artist-matching is exact-normalized, not substring, with a regression test for the "Air"/"Fairground Attraction" false-positive case; the dict-shaped "no result" response; unicode sharp-sign handling; HTTP error propagation; every enharmonic key spelling round-tripping through `to_camelot()`), `sync/discogs_sync.py` (pagination, the Release/Track upsert behavior, the Track-id-preservation-on-resync regression test, the artist-join formatting verified against real multi-artist examples, missing-credential and HTTP-error errors), `enrich/pipeline.py` (a source raising mid-batch doesn't abort the rest of the tracks; the release-artist-fallback regression test; track-level artist takes priority over release-level when both present), the `/search` query (matches across track/release/artist/label/catalog number, case-insensitivity, no-match and no-BPM-yet states), `/release/{id}` (happy path + 404), `/track/{id}/bpm-key` (create vs. update-in-place, always stamps `source="manual"`, unrecognized-key handling, plus the htmx-vs-JSON response branch), `/sync` and `/enrich` (correct messages depending on whether any source is configured), `/shutdown` (mocks `os.kill` so the suite doesn't kill itself), and the index page's unenriched-track count. Uses an in-memory SQLite DB per test (`tests/conftest.py`, `StaticPool` + dependency override on `get_session`) — never touches the real `vinyl_library.db`. Run with `pytest` (after `pip install -e '.[dev]'`). The stub modules (`enrich/sources/beatport.py`, `enrich/audio_analysis.py`) have no tests yet — nothing to verify until they're implemented against real credentials.
+**Tests:** `tests/` has 156 pytest cases covering everything with real logic — `enrich/camelot.py` (exhaustive Camelot wheel mapping), `enrich/sources/getsongbpm.py` (request shape — title-only search, since the API doesn't filter by artist server-side; artist-matching is exact-normalized, not substring, with a regression test for the "Air"/"Fairground Attraction" false-positive case; the dict-shaped "no result" response; unicode sharp-sign handling; HTTP error propagation; every enharmonic key spelling round-tripping through `to_camelot()`), `sync/discogs_sync.py` (pagination, the Release/Track upsert behavior, the Track-id-preservation-on-resync regression test, the artist-join formatting verified against real multi-artist examples, missing-credential and HTTP-error errors), `enrich/pipeline.py` (a source raising mid-batch doesn't abort the rest of the tracks; the release-artist-fallback regression test; track-level artist takes priority over release-level when both present), `api/routes/search.py`'s `browse_releases`/`get_filter_options` (year/genre/artist filtering and combinations, distinct-value dedup) plus a regression test hitting the real `/search` route (not just the helper function) with the empty-string filter params an unselected `<select>` actually sends — this is the test that would have caught the `year: Optional[int]` 422 bug if it had existed before the live-browser pass found it, `/track/{id}` GET (featured track + full release render, manual-entry form positioned before the tracklist, no duplicate `bpm-key-{id}` DOM id, only one `<a>` tag — "back to search" — on the whole page, 404), the `/search` query (matches across track/release/artist/label/catalog number, case-insensitivity, no-match and no-BPM-yet states), `/release/{id}` (happy path + 404, no featured-track block), `/track/{id}/bpm-key` PATCH (create vs. update-in-place, always stamps `source="manual"`, unrecognized-key handling, plus the htmx-vs-JSON response branch), `/sync` and `/enrich` (correct messages depending on whether any source is configured), `/shutdown` (mocks `os.kill` so the suite doesn't kill itself), and the index page's unenriched-track count. Uses an in-memory SQLite DB per test (`tests/conftest.py`, `StaticPool` + dependency override on `get_session`) — never touches the real `vinyl_library.db`. Run with `pytest` (after `pip install -e '.[dev]'`). The stub modules (`enrich/sources/beatport.py`, `enrich/audio_analysis.py`) have no tests yet — nothing to verify until they're implemented against real credentials.
 
 **Verified working** (manually tested by booting `uvicorn api.main:app` and curling each route, several real browser passes via the preview tool, and full runs against the real Discogs account):
-- `GET /` renders the search page, accurately reflects the unenriched-track count.
-- `GET /search?q=...` queries the local SQLite DB and returns an htmx partial with real BPM/Camelot key data.
+- `GET /` renders the browsable release list by default (all 42 real releases, cover art, label/catalog/year), with year/genre/artist filter dropdowns populated from the real collection's actual distinct values — confirmed live that selecting "Electronic" correctly narrows the list.
+- `GET /search?q=...` queries the local SQLite DB and returns an htmx partial with real BPM/Camelot key data; each result links to `/track/{id}`.
+- `GET /track/{id}` — confirmed live: clicking a search result (e.g. Aaliyah - "Beats 4 Da Streets (Intro)") opens that track featured at the top with its manual-entry form immediately visible (no scrolling), the full release's Discogs metadata (label, year, format, genres, styles) underneath as plain text, and the complete tracklist below that — with the featured track's *own* row in that tracklist correctly showing no second edit form (avoiding the duplicate-DOM-id problem). Confirmed via `document.querySelectorAll('a')` that the only link on the page is "back to search" — nothing else is clickable.
 - `POST /sync` — ran for real: 42 releases, 348 tracks synced from the live Discogs account in ~68s. Artist credits, label, catalog number, year, format, genres, styles, and cover art all spot-checked correct. Re-running it is idempotent and was confirmed not to duplicate or re-id existing rows.
 - `POST /enrich` — ran for real against the synced collection: 111/348 tracks (~32%) matched via GetSongBPM. A few outlier results (e.g. a 200 BPM match) were checked directly against the raw API to rule out a matching bug before being accepted as genuine data-source noise (see "Known data-quality caveat" below).
 - `GET /release/{id}` 404s correctly for a nonexistent release; with real data, renders the tracklist with an inline BPM/key edit form per track, pre-filled with enriched values.
@@ -111,6 +133,8 @@ A "Quit" button is fixed in the top-right corner on every page (added to `base.h
 
 **Known environment gap:** [ARCHITECTURE_TARGET.md](ARCHITECTURE_TARGET.md) specifies Python 3.12+, but the only Python available on this machine is system Python 3.9.6 (no `pyenv`/`uv`/Homebrew found). The project currently targets `>=3.9` in `pyproject.toml` so it actually runs here. This works fine for everything built so far, but should be revisited — see [DECISIONS.md](DECISIONS.md) ADR-006.
 
+**Dev tooling note:** the agent's own preview-tool launch config (`/Users/tants/src/.claude/launch.json`, outside this repo) runs the dev server on port 8001, not 8000, specifically so it doesn't collide with a manually-started `uvicorn api.main:app --reload` (which the user runs on the default port 8000 per the README). Both point at the same `vinyl_library.db`.
+
 ## Update log
 
 - *(2026-06-21)* Repo created with planning docs only. No code.
@@ -122,3 +146,4 @@ A "Quit" button is fixed in the top-right corner on every page (added to `base.h
 - *(2026-06-21)* Got a real `GETSONGBPM_API_KEY` and tested against the live API — found and fixed two real bugs the unauthenticated/mocked testing couldn't catch: (1) the API ignores artist filtering entirely (the assumed `song:{title} artist:{artist}` combined lookup syntax just searches that literal string and matches nothing) — rewrote to search by title only and pick the matching artist out of the results client-side, by exact normalized name rather than substring (substring matching produced a real false positive: "Air" matching "Fairground Attraction"); (2) `key_of` uses the unicode sharp sign "♯" (U+266F), not ASCII "#", which silently broke every sharp-key parse — now normalized before lookup. Verified end-to-end through the real running app: seeded deadmau5 - Strobe and Daft Punk - One More Time, hit the Enrich button, got back 128 BPM/G# minor and 122 BPM/D major respectively — both match known real-world values. Also fixed a stale hardcoded "no sources configured" message on `/enrich` that no longer reflected reality once a source was actually live. Repo made public (was private) to satisfy GetSongBPM's mandatory backlink requirement; added a Credits section to README.md. 13 net new/changed tests (119 total).
 - *(2026-06-21)* Implemented `sync/discogs_sync.py` for real and got a real Discogs token. Verified the full collection/release-detail contract against the live API before writing code (pagination shape, that tracklist only exists on the per-release detail endpoint, the artist "join" field convention, rate-limit headers). Caught and fixed a real formatting bug by checking against actual multi-artist releases: commas don't get a leading space in Discogs' own `artists_sort`, unlike every other join type ("Prozak (11), Silva Bumpa" not "Prozak (11) , Silva Bumpa") — the fix was verified against 4 real multi-artist releases. Designed the Track upsert to match by `(release_id, position)` rather than delete-and-reinsert specifically so re-syncing can never orphan a previously-enriched track's `BpmKeyData` by giving it a new row id — regression-tested. Ran the real sync: 42 releases, 348 tracks, all spot-checked correct (e.g. Underworld - Born Slippy).
 - *(2026-06-21)* Ran `enrich_unmatched_tracks()` against the real synced collection for the first time and got 0/348 matches — investigated rather than accepting that as "low coverage," and found a real bug in `enrich/pipeline.py`: it was passing `track.artists or ""` to the lookup, but `Track.artists` is `None` for any non-compilation release (the real artist credit lives on `Release.artists`, exactly the fallback `api/routes/search.py` already used for display) — so every single lookup was silently searching with an empty artist string. Fixed the pipeline to use the same release-artist fallback, with a regression test capturing the exact artist string passed to the source. Re-ran enrichment: 111/348 tracks (~32%) matched for real. Spot-checked an outlier (a 200 BPM result) directly against the raw API before accepting it, to rule out a matching bug rather than assume — confirmed it's genuine data-source noise, not a false match. 16 net new/changed tests (135 total).
+- *(2026-06-21)* Post-MVP UI pass: (1) the index page now shows a browsable list of all releases by default instead of "Start typing", filterable by year/genre/artist via dropdowns populated from the actual collection (`browse_releases`/`get_filter_options` in `api/routes/search.py`); (2) added `GET /track/{id}`, which reuses `release.html` with that track passed as `featured_track` so it renders prominently at the top — with its own manual-entry form immediately visible, no scrolling — followed by the full release's Discogs metadata and complete tracklist; search results now link to `/track/{id}` instead of `/release/{id}`. `bpm_key_cell.html` gained an `editable` flag to avoid a duplicate DOM id when the featured track also appears in the tracklist below it. Confirmed live that none of the Discogs metadata is clickable (only link on the page is "back to search"). A live browser pass (not just the test suite) caught a real bug the tests missed: the `/search` route declared `year: Optional[int]`, which FastAPI 422s on `year=""` — exactly what an unselected `<select>` submits — because the existing tests called `browse_releases()` directly rather than hitting the route through the actual query-string path a browser sends; fixed by accepting `year` as a raw string and parsing manually, with a new regression test against the real route. Also discovered mid-session that `.claude/launch.json`'s port 8000 collided with the user's own long-running `uvicorn --reload` process from before a laptop restart; moved the agent's own preview port to 8001 rather than disturbing it. 21 net new/changed tests (156 total).
