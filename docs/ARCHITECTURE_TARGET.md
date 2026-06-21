@@ -106,6 +106,7 @@ bpm_key_data
 - `POST /sync` — triggers a Discogs collection sync.
 - `POST /enrich` — triggers the enrichment pipeline over unenriched tracks.
 - `PATCH /track/{id}/bpm-key` — manual override entry point.
+- `POST /shutdown` — stops the local server (self-`SIGTERM`), for convenience exiting from the UI instead of the terminal.
 - No auth — bound to localhost by default; LAN access is the user's own network, not exposed publicly.
 
 ### 6. Browser UI (`web/`)

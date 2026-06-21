@@ -29,6 +29,7 @@ vinyl-dj-library/
       enrich.py          -- POST /enrich (wired to enrich/pipeline.py, currently a no-op
                               — no source APIs configured yet)
       track.py            -- PATCH /track/{id}/bpm-key (manual override, fully functional)
+      system.py            -- POST /shutdown (self-SIGTERM, for the UI Quit button)
   sync/
     discogs_sync.py   -- structured per target arch, raises NotImplementedError —
                           Phase 1 work, blocked on a Discogs token
@@ -51,7 +52,9 @@ vinyl-dj-library/
       style.css
 ```
 
-**Tests:** `tests/` has 48 pytest cases covering everything with real logic — `enrich/camelot.py` (exhaustive Camelot wheel mapping), the `/search` query (matches across track/release/artist/label/catalog number, case-insensitivity, no-match and no-BPM-yet states), `/release/{id}` (happy path + 404), `/track/{id}/bpm-key` (create vs. update-in-place, always stamps `source="manual"`, unrecognized-key handling, plus the htmx-vs-JSON response branch), `/sync` and `/enrich` (correct messages when no credentials/sources are configured), and the index page's unenriched-track count. Uses an in-memory SQLite DB per test (`tests/conftest.py`, `StaticPool` + dependency override on `get_session`) — never touches the real `vinyl_library.db`. Run with `pytest` (after `pip install -e '.[dev]'`). The stub modules (`sync/discogs_sync.py`, `enrich/sources/beatport.py`, `enrich/sources/getsongbpm.py`, `enrich/audio_analysis.py`) have no tests yet — nothing to verify until they're implemented against real credentials.
+A "Quit" button is fixed in the top-right corner on every page (added to `base.html`), confirms before firing, and POSTs to `/shutdown`.
+
+**Tests:** `tests/` has 49 pytest cases covering everything with real logic — `enrich/camelot.py` (exhaustive Camelot wheel mapping), the `/search` query (matches across track/release/artist/label/catalog number, case-insensitivity, no-match and no-BPM-yet states), `/release/{id}` (happy path + 404), `/track/{id}/bpm-key` (create vs. update-in-place, always stamps `source="manual"`, unrecognized-key handling, plus the htmx-vs-JSON response branch), `/sync` and `/enrich` (correct messages when no credentials/sources are configured), and the index page's unenriched-track count. Uses an in-memory SQLite DB per test (`tests/conftest.py`, `StaticPool` + dependency override on `get_session`) — never touches the real `vinyl_library.db`. Run with `pytest` (after `pip install -e '.[dev]'`). The stub modules (`sync/discogs_sync.py`, `enrich/sources/beatport.py`, `enrich/sources/getsongbpm.py`, `enrich/audio_analysis.py`) have no tests yet — nothing to verify until they're implemented against real credentials.
 
 **Verified working** (manually tested by booting `uvicorn api.main:app` and curling each route, plus a real browser pass via the preview tool with seeded data):
 - `GET /` renders the search page, shows "0 tracks need BPM/key" against the empty DB.
@@ -60,6 +63,7 @@ vinyl-dj-library/
 - `POST /enrich` runs the pipeline (a no-op against 0 tracks) and returns a status message.
 - `GET /release/{id}` 404s correctly for a nonexistent release; with real data, renders the tracklist with an inline BPM/key edit form per track.
 - Inline manual edit: filling the BPM/key form and submitting sends a JSON-encoded `PATCH /track/{id}/bpm-key`, persists to SQLite, computes the Camelot key (e.g. "A minor" → "8A"), and swaps the updated value into the page — confirmed visible afterward on both the release page and `/search`.
+- Quit button: clicking it (after confirming the dialog) sends `POST /shutdown`, and the server process fully exits — confirmed at the OS level (`pgrep` no longer found it after clicking, not just that the HTTP connection dropped).
 - Static assets (`htmx.min.js`, `htmx-json-enc.js`, `style.css`) serve correctly.
 
 **Not yet real:**
@@ -77,3 +81,4 @@ vinyl-dj-library/
 - *(2026-06-21)* Pushed to GitHub as a private repo. Built and verified the runnable skeleton: SQLite schema, FastAPI app with search/release/sync/enrich/manual-override routes, htmx-based browser UI (vendored, offline), and stub sync/enrichment modules structured per the target architecture but not yet wired to real API credentials.
 - *(2026-06-21)* Added a pytest suite (47 tests) covering all routes and the Camelot mapping. Replaced deprecated `@app.on_event("startup")` with a `lifespan` context manager and updated `TemplateResponse` calls to the new (request, name, context) argument order — both surfaced as deprecation warnings once tests existed to catch them.
 - *(2026-06-21)* Built the inline manual BPM/key edit form on the release detail page (`web/templates/partials/bpm_key_cell.html`), shared between the initial render and the `PATCH /track/{id}/bpm-key` htmx response. Vendored the `htmx-json-enc` extension so the form posts JSON without changing the existing API contract. Verified end-to-end in a real browser with seeded data: edit → save → Camelot key computed → reflected on both the release page and search results. Added a test for the new htmx response branch (48 tests total).
+- *(2026-06-21)* Added `POST /shutdown` and a Quit button (fixed top-right, every page) so the server can be stopped from the UI instead of the terminal. Sends `SIGTERM` to its own process. Test mocks `os.kill` to verify the signal without killing the test run. Verified live: clicking it actually terminated the OS process, not just the HTTP connection (49 tests total).

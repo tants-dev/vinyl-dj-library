@@ -9,6 +9,14 @@
   <script src="/static/htmx-json-enc.js"></script>
 </head>
 <body>
+  <button
+    class="quit-btn"
+    hx-post="/shutdown"
+    hx-confirm="Stop the Vinyl DJ Library server? You'll need to restart it from the terminal to use the app again."
+    hx-target="body"
+    hx-swap="innerHTML"
+    title="Stop the local server"
+  >Quit</button>
   {% block content %}{% endblock %}
 </body>
 </html>

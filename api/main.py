@@ -10,7 +10,7 @@ from sqlmodel import Session, func, select
 
 from db.models import Track
 from db.session import get_session, init_db
-from api.routes import enrich, release, search, sync, track
+from api.routes import enrich, release, search, sync, system, track
 
 load_dotenv()
 
@@ -32,6 +32,7 @@ app.include_router(release.router)
 app.include_router(sync.router)
 app.include_router(enrich.router)
 app.include_router(track.router)
+app.include_router(system.router)
 
 
 @app.get("/", response_class=HTMLResponse)

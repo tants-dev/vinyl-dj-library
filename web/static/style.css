@@ -15,6 +15,24 @@ body {
   padding: 1.5rem;
 }
 
+.quit-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: #2a1414;
+  color: #e88;
+  border: 1px solid #533;
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.quit-btn:hover {
+  background: #3a1818;
+}
+
 h1 {
   font-size: 1.4rem;
   margin-bottom: 1rem;
