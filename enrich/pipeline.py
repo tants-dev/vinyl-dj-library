@@ -6,14 +6,18 @@ see enrich/audio_analysis.py, not run automatically by this pipeline).
 Never overwrites a track whose existing BpmKeyData.source == "manual".
 """
 
+import logging
 from typing import List
 
+import httpx
 from sqlmodel import Session, select
 
 from db.models import BpmKeyData, Track
 from enrich.camelot import to_camelot
 from enrich.sources import beatport, getsongbpm
 from enrich.sources.base import Match
+
+logger = logging.getLogger(__name__)
 
 SOURCES_IN_PRIORITY_ORDER = [beatport, getsongbpm]
 
@@ -22,7 +26,17 @@ def _find_match(artist: str, title: str) -> "Match | None":
     for source in SOURCES_IN_PRIORITY_ORDER:
         if not source.is_configured():
             continue
-        match = source.lookup(artist, title)
+        try:
+            match = source.lookup(artist, title)
+        except httpx.HTTPError:
+            # A network blip or bad response from one source shouldn't abort
+            # enrichment for every other track in the batch — log and move
+            # on to the next source / track.
+            logger.warning(
+                "BPM/key lookup failed via %s for %r", source.__name__, title,
+                exc_info=True,
+            )
+            continue
         if match:
             return match
     return None

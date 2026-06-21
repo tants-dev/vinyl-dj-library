@@ -27,10 +27,10 @@ Goal: your real vinyl collection lives in the local database.
 Goal: tracks get BPM/key automatically, with provenance tracked.
 
 - [ ] Beatport source adapter (if/once partner access is approved).
-- [ ] GetSongBPM source adapter.
-- [ ] Pipeline tries sources in priority order, stores `source` + `confidence` per [ADR-003](DECISIONS.md#adr-003-tiered-bpmkey-data-strategy--beatport-primary-getsongbpm-fallback-local-audio-analysis-last-resort-manual-override-always-available).
+- [x] GetSongBPM source adapter (`enrich/sources/getsongbpm.py`) — implemented and unit-tested against a mocked API; not yet exercised against a real key, since none is provisioned (Phase 0 still open on that).
+- [x] Pipeline tries sources in priority order, stores `source` + `confidence` per [ADR-003](DECISIONS.md#adr-003-tiered-bpmkey-data-strategy--beatport-primary-getsongbpm-fallback-local-audio-analysis-last-resort-manual-override-always-available). Also now resilient to a single source erroring mid-batch (logs and moves on instead of aborting the rest of the tracks).
 - [ ] Negative-result caching so dead-end lookups aren't repeated every run.
-- [ ] Run against the real synced collection, eyeball match-rate and accuracy on a sample of known tracks.
+- [ ] Run against the real synced collection, eyeball match-rate and accuracy on a sample of known tracks. Blocked on getting a real `GETSONGBPM_API_KEY` and on Phase 1 (Discogs sync) landing first.
 
 ## Phase 3 — Local search & web UI
 
