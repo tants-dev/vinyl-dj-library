@@ -19,6 +19,21 @@ class FakeResponse:
         return self._json_data
 
 
+class FakeClient:
+    """Stands in for the pooled httpx.Client getsongbpm.py now reuses across
+    calls (see _get_client) — tests patch getsongbpm._get_client to return
+    one of these instead of touching the real network or httpx.Client.
+    """
+
+    def __init__(self, respond):
+        self._respond = respond
+        self.calls = []
+
+    def get(self, url, params=None):
+        self.calls.append({"url": url, "params": params})
+        return self._respond(url, params) if callable(self._respond) else self._respond
+
+
 def _song(artist, title="Levels", tempo="124", key_of="Am"):
     return {
         "id": "xyz",
@@ -27,6 +42,21 @@ def _song(artist, title="Levels", tempo="124", key_of="Am"):
         "key_of": key_of,
         "artist": {"name": artist},
     }
+
+
+@pytest.fixture(autouse=True)
+def _reset_pooled_client():
+    # Each test patches _get_client directly, but reset the module-level
+    # singleton too so no test can leak a real/fake client into another.
+    getsongbpm._client = None
+    yield
+    getsongbpm._client = None
+
+
+def _use_fake_client(monkeypatch, respond):
+    client = FakeClient(respond)
+    monkeypatch.setattr(getsongbpm, "_get_client", lambda: client)
+    return client
 
 
 def test_is_configured_reflects_env_var(monkeypatch):
@@ -40,11 +70,37 @@ def test_is_configured_reflects_env_var(monkeypatch):
 def test_lookup_returns_none_without_api_key(monkeypatch):
     monkeypatch.delenv("GETSONGBPM_API_KEY", raising=False)
 
-    def fail_if_called(*args, **kwargs):
+    def fail_if_called():
         raise AssertionError("should not call the API without a key")
 
-    monkeypatch.setattr(httpx, "get", fail_if_called)
+    monkeypatch.setattr(getsongbpm, "_get_client", fail_if_called)
     assert getsongbpm.lookup("Aly-Us", "Follow Me") is None
+
+
+def test_lookup_reuses_the_same_client_across_calls(monkeypatch):
+    # The whole point of pooling: repeated lookups must go through the same
+    # client instance (so the underlying connection is reused), not a fresh
+    # one per call.
+    monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
+    seen_clients = []
+
+    real_get_client = getsongbpm._get_client
+
+    def tracking_get_client():
+        client = real_get_client()
+        seen_clients.append(client)
+        return client
+
+    monkeypatch.setattr(getsongbpm, "_get_client", tracking_get_client)
+    monkeypatch.setattr(
+        httpx.Client, "get", lambda self, url, params=None: FakeResponse({"search": []})
+    )
+
+    getsongbpm.lookup("A", "T1")
+    getsongbpm.lookup("A", "T2")
+
+    assert len(seen_clients) == 2
+    assert seen_clients[0] is seen_clients[1]
 
 
 def test_lookup_searches_by_title_only(monkeypatch):
@@ -52,18 +108,14 @@ def test_lookup_searches_by_title_only(monkeypatch):
     # the real endpoint) — searches must be title-only, with the right
     # artist picked out of the results client-side.
     monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
-    captured = {}
+    client = _use_fake_client(
+        monkeypatch, FakeResponse({"search": [_song("Aly-Us", "Follow Me")]})
+    )
 
-    def fake_get(url, params, timeout):
-        captured["url"] = url
-        captured["params"] = params
-        return FakeResponse({"search": [_song("Aly-Us", "Follow Me")]})
-
-    monkeypatch.setattr(httpx, "get", fake_get)
     getsongbpm.lookup("Aly-Us", "Follow Me")
 
-    assert captured["url"] == f"{getsongbpm.API_BASE}/search/"
-    assert captured["params"] == {
+    assert client.calls[0]["url"] == f"{getsongbpm.API_BASE}/search/"
+    assert client.calls[0]["params"] == {
         "api_key": "abc123",
         "type": "song",
         "lookup": "Follow Me",
@@ -72,10 +124,9 @@ def test_lookup_searches_by_title_only(monkeypatch):
 
 def test_lookup_picks_the_matching_artist_out_of_several_results(monkeypatch):
     monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
-    monkeypatch.setattr(
-        httpx,
-        "get",
-        lambda *a, **k: FakeResponse(
+    _use_fake_client(
+        monkeypatch,
+        FakeResponse(
             {
                 "search": [
                     _song("Nonpoint", tempo="100", key_of="C♯"),
@@ -95,10 +146,9 @@ def test_lookup_picks_the_matching_artist_out_of_several_results(monkeypatch):
 
 def test_lookup_returns_none_when_artist_not_among_results(monkeypatch):
     monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
-    monkeypatch.setattr(
-        httpx,
-        "get",
-        lambda *a, **k: FakeResponse({"search": [_song("Nonpoint"), _song("Gunplay")]}),
+    _use_fake_client(
+        monkeypatch,
+        FakeResponse({"search": [_song("Nonpoint"), _song("Gunplay")]}),
     )
     assert getsongbpm.lookup("Avicii", "Levels") is None
 
@@ -107,33 +157,28 @@ def test_lookup_handles_dict_no_results_response(monkeypatch):
     # Confirmed against the live API: a miss looks like
     # {"search": {"error": "no result"}} — a dict, not an empty list.
     monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
-    monkeypatch.setattr(
-        httpx, "get", lambda *a, **k: FakeResponse({"search": {"error": "no result"}})
-    )
+    _use_fake_client(monkeypatch, FakeResponse({"search": {"error": "no result"}}))
     assert getsongbpm.lookup("Nobody", "Nothing") is None
 
 
 def test_lookup_handles_empty_results_list(monkeypatch):
     monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
-    monkeypatch.setattr(httpx, "get", lambda *a, **k: FakeResponse({"search": []}))
+    _use_fake_client(monkeypatch, FakeResponse({"search": []}))
     assert getsongbpm.lookup("Nobody", "Nothing") is None
 
 
 def test_lookup_returns_none_when_match_has_no_usable_data(monkeypatch):
     monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
-    monkeypatch.setattr(
-        httpx,
-        "get",
-        lambda *a, **k: FakeResponse(
-            {"search": [{"id": "xyz", "title": "T", "artist": {"name": "A"}}]}
-        ),
+    _use_fake_client(
+        monkeypatch,
+        FakeResponse({"search": [{"id": "xyz", "title": "T", "artist": {"name": "A"}}]}),
     )
     assert getsongbpm.lookup("A", "T") is None
 
 
 def test_lookup_raises_on_http_error_status(monkeypatch):
     monkeypatch.setenv("GETSONGBPM_API_KEY", "bad-key")
-    monkeypatch.setattr(httpx, "get", lambda *a, **k: FakeResponse({}, status_code=401))
+    _use_fake_client(monkeypatch, FakeResponse({}, status_code=401))
     with pytest.raises(httpx.HTTPStatusError):
         getsongbpm.lookup("A", "T")
 
