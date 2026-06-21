@@ -40,3 +40,7 @@ pytest
 ## Stack
 
 Python, FastAPI, SQLite (via SQLModel), Jinja2 + htmx (vendored locally, no CDN dependency, no JS build step). See [docs/DECISIONS.md](docs/DECISIONS.md) for the reasoning.
+
+## Credits
+
+Track BPM/key data provided by [GetSongBPM.com](https://getsongbpm.com).
