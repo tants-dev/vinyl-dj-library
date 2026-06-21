@@ -67,3 +67,15 @@ Every stored BPM/key value keeps a `source` field (`beatport` / `getsongbpm` / `
 **Why:** Discogs enforces API rate limits (60 req/min authenticated) and the collection doesn't change every time the user wants to look up a record while DJing. Searching must be instant and work offline; hitting Discogs live per search would be slow, rate-limit-prone, and pointless since collection data changes rarely (only when buying/selling records).
 
 **Implications:** Need a "last synced" indicator and a manual re-sync action. Enrichment (BPM/key lookups) runs against newly-synced/unenriched tracks, not on every search either.
+
+---
+
+## ADR-006: Project targets Python 3.9+, not 3.12+, until the dev machine has a newer interpreter
+
+**Status:** Accepted (temporary — revisit when a newer Python is available)
+
+**Decision:** `pyproject.toml` declares `requires-python = ">=3.9"`. Code avoids 3.10+-only syntax (e.g. `X | None` union types use `typing.Optional` instead).
+
+**Why:** [ARCHITECTURE_TARGET.md](ARCHITECTURE_TARGET.md) originally specified Python 3.12+, but the only interpreter available on this machine when the skeleton was built was system Python 3.9.6 — no `pyenv`, `uv`, or Homebrew were installed to get a newer one without a larger detour. 3.9 is sufficient for everything in the current skeleton (FastAPI, SQLModel, httpx, Jinja2 all support it fine), so there was no reason to block scaffolding on installing new tooling.
+
+**Implications:** If/when a newer Python is installed (e.g. via Homebrew or `uv`), bump `requires-python` back up and this ADR can be marked superseded. Until then, don't introduce 3.10+ syntax (structural pattern matching, `X | Y` unions, etc.) without checking it actually runs locally first.

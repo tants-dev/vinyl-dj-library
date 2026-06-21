@@ -9,8 +9,8 @@ Goal: have everything needed to start pulling real data.
 - [ ] Discogs personal access token obtained, collection folder ID identified.
 - [ ] GetSongBPM API key obtained.
 - [ ] Beatport API partner application submitted ([open risk, ADR-003](DECISIONS.md#adr-003-tiered-bpmkey-data-strategy--beatport-primary-getsongbpm-fallback-local-audio-analysis-last-resort-manual-override-always-available)) — track approval/denial here.
-- [ ] Python project scaffolded (`pyproject.toml`, dependencies, `.env` for secrets, gitignore for `vinyl_library.db` and `.env`).
-- [ ] SQLite schema created per [ARCHITECTURE_TARGET.md](ARCHITECTURE_TARGET.md#4-data-model-sqlite).
+- [x] Python project scaffolded (`pyproject.toml`, dependencies, `.env` for secrets, gitignore for `vinyl_library.db` and `.env`).
+- [x] SQLite schema created per [ARCHITECTURE_TARGET.md](ARCHITECTURE_TARGET.md#4-data-model-sqlite) (`db/models.py`, created automatically on app startup).
 
 ## Phase 1 — Discogs collection sync
 
@@ -36,16 +36,16 @@ Goal: tracks get BPM/key automatically, with provenance tracked.
 
 Goal: this is the thing you actually use while DJing.
 
-- [ ] FastAPI backend: `/search`, `/release/{id}` endpoints against local SQLite (instant, no network calls at search time).
-- [ ] Browser UI: search-as-you-type, results show cover art + BPM + key (Camelot and standard).
-- [ ] Release detail view with full tracklist.
+- [x] FastAPI backend: `/search`, `/release/{id}` endpoints against local SQLite (instant, no network calls at search time).
+- [x] Browser UI: search-as-you-type (htmx, vendored locally — no CDN dependency), results show cover art + BPM + key (Camelot and standard). Currently empty pending real data from Phase 1.
+- [x] Release detail view with full tracklist.
 - [ ] Confirm it's usable from a tablet/phone on the home network, not just the machine running the server.
 
 ## Phase 4 — Manual correction & local audio analysis fallback
 
 Goal: cover the records that no database has — white labels, promos, dubplates, bootlegs.
 
-- [ ] `PATCH /track/{id}/bpm-key` manual override endpoint + UI inline edit.
+- [x] `PATCH /track/{id}/bpm-key` manual override endpoint (API only — UI inline edit still pending).
 - [ ] Manual values never get clobbered by re-running enrichment.
 - [ ] Local audio analysis module (`librosa`/`essentia`) for needle-drop sample → BPM/key estimate.
 - [ ] UI flow for recording/uploading a short sample for a specific track.

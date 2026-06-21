@@ -1,0 +1,25 @@
+{% if not results %}
+  <p class="empty-state">
+    {% if query %}No matches for "{{ query }}".{% else %}Start typing to search your collection.{% endif %}
+  </p>
+{% else %}
+  {% for r in results %}
+    <a class="result-row" href="/release/{{ r.release_id }}" style="text-decoration:none;color:inherit;">
+      {% if r.cover_image_url %}
+        <img src="{{ r.cover_image_url }}" alt="">
+      {% endif %}
+      <div class="result-meta">
+        <div class="track-title">{{ r.position }} &middot; {{ r.title }}</div>
+        <div class="release-title">{{ r.release_title }} &mdash; {{ r.artists }}</div>
+      </div>
+      <div class="bpm-key">
+        {% if r.bpm %}
+          <div class="bpm">{{ "%.0f"|format(r.bpm) }}</div>
+          <div class="key">{{ r.camelot_key or r.key or "" }}</div>
+        {% else %}
+          <div class="key">no BPM/key yet</div>
+        {% endif %}
+      </div>
+    </a>
+  {% endfor %}
+{% endif %}

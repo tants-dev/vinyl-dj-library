@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+  <p><a href="/" style="color:var(--muted);">&larr; back to search</a></p>
+  <h1>{{ release.title }} &mdash; {{ release.artists }}</h1>
+  <p style="color:var(--muted);">
+    {{ release.label or "" }} {{ release.catalog_number or "" }} &middot; {{ release.year or "" }}
+  </p>
+
+  <div id="results">
+    {% for t in tracks %}
+      <div class="result-row">
+        <div class="result-meta">
+          <div class="track-title">{{ t.position }} &middot; {{ t.title }}</div>
+          <div class="release-title">{{ t.artists or "" }}</div>
+        </div>
+        <div class="bpm-key">
+          {% if t.bpm_key and t.bpm_key.bpm %}
+            <div class="bpm">{{ "%.0f"|format(t.bpm_key.bpm) }}</div>
+            <div class="key">{{ t.bpm_key.camelot_key or t.bpm_key.key or "" }} &middot; {{ t.bpm_key.source }}</div>
+          {% else %}
+            <div class="key">no BPM/key yet</div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

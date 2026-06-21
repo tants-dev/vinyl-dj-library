@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Vinyl DJ Library</h1>
+
+  <div class="status-bar">
+    <span>
+      {% if last_synced %}Last synced: {{ last_synced }}{% else %}Not synced yet{% endif %}
+      &middot; {{ unenriched_count }} track(s) need BPM/key
+    </span>
+    <span>
+      <button hx-post="/sync" hx-target="#status-message" hx-swap="innerHTML">Sync Discogs</button>
+      <button hx-post="/enrich" hx-target="#status-message" hx-swap="innerHTML">Enrich BPM/key</button>
+    </span>
+  </div>
+  <div id="status-message"></div>
+
+  <input
+    type="search"
+    name="q"
+    placeholder="Search artist, title, label, catalog #..."
+    autofocus
+    hx-get="/search"
+    hx-trigger="input changed delay:200ms, search"
+    hx-target="#results"
+    hx-swap="innerHTML"
+  >
+
+  <div id="results">
+    <p class="empty-state">Start typing to search your collection.</p>
+  </div>
+{% endblock %}
