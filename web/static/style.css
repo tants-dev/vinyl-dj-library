@@ -33,9 +33,91 @@ body {
   background: #3a1818;
 }
 
+.tap-bpm-nav-link {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  background: #142a1c;
+  color: var(--accent);
+  border: 1px solid #2a4a35;
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  text-decoration: none;
+  z-index: 10;
+}
+
+.tap-bpm-nav-link:hover {
+  background: #1a3a24;
+}
+
 h1 {
   font-size: 1.4rem;
   margin-bottom: 1rem;
+}
+
+.bpm-tool-section {
+  background: #1c1c1c;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.bpm-tool-section h2 {
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.75rem;
+  text-align: left;
+}
+
+.tap-bpm-value {
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tap-count {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.tap-button {
+  width: 100%;
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 2rem;
+  background: var(--accent);
+  color: #111;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.tap-button:active {
+  background: #17a64a;
+}
+
+.tap-reset {
+  margin-top: 0.75rem;
+  background: #1c1c1c;
+  color: var(--fg);
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+}
+
+.tap-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 1rem;
+  text-align: left;
 }
 
 input[type="search"] {

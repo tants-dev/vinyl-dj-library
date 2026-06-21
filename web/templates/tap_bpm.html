@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+  <p><a href="/" style="color:var(--muted);">&larr; back to search</a></p>
+  <h1>Live BPM</h1>
+
+  <section class="bpm-tool-section">
+    <h2>Currently playing</h2>
+    <p class="empty-state">Mic-based live analysis coming soon.</p>
+  </section>
+
+  <section class="bpm-tool-section">
+    <h2>Tap tempo</h2>
+    <div id="tap-bpm-value" class="tap-bpm-value">&mdash;</div>
+    <div id="tap-count" class="tap-count">0 taps</div>
+    <button id="tap-button" class="tap-button" type="button">TAP</button>
+    <button id="tap-reset" class="tap-reset" type="button">Reset</button>
+    <p class="tap-hint">Tap the button (or press space) in time with the beat. A gap of more than 2 seconds starts a new count.</p>
+  </section>
+
+  <script src="/static/tap-bpm.js"></script>
+{% endblock %}

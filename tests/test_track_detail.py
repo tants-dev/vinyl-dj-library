@@ -65,12 +65,15 @@ def test_track_detail_bpm_key_id_not_duplicated(session, client):
     assert resp.text.count(f'id="bpm-key-{t1.id}"') == 1
 
 
-def test_track_detail_no_info_is_clickable_except_back_link(session, client):
+def test_track_detail_no_info_is_clickable_except_nav_links(session, client):
+    # Only the "back to search" link and the global "Tap BPM" nav link
+    # (present on every page) should be clickable -- none of the Discogs
+    # metadata (label, year, format, genres, styles) should be.
     t1, _ = _seed(session)
     resp = client.get(f"/track/{t1.id}")
 
-    anchors = re.findall(r"<a\b", resp.text)
-    assert len(anchors) == 1  # only "back to search"
+    anchors = re.findall(r'<a\b[^>]*href="([^"]+)"', resp.text)
+    assert sorted(anchors) == ["/", "/tap-bpm"]
 
 
 def test_track_detail_not_found_returns_404(session, client):

@@ -25,6 +25,29 @@ def test_index_with_empty_db(session, client):
     assert "0 track(s) need BPM/key" in resp.text
 
 
+def test_index_shows_not_synced_when_no_release_has_a_sync_timestamp(session, client):
+    resp = client.get("/")
+    assert "Not synced yet" in resp.text
+
+
+def test_index_shows_last_synced_timestamp_from_most_recent_release(session, client):
+    # Regression test: last_synced was hardcoded to None, so the status bar
+    # always said "Not synced yet" even after a real sync populated
+    # Release.discogs_synced_at on every row.
+    session.add(
+        Release(id=1, title="Old", artists="A", discogs_synced_at="2026-06-20T10:00:00+00:00")
+    )
+    session.add(
+        Release(id=2, title="New", artists="B", discogs_synced_at="2026-06-22T07:15:00+00:00")
+    )
+    session.commit()
+
+    resp = client.get("/")
+
+    assert "Not synced yet" not in resp.text
+    assert "2026-06-22 07:15 UTC" in resp.text
+
+
 def test_search_form_handles_enter_key_via_htmx_not_native_submit(session, client):
     # Regression test: the #controls form has hx-get but used to declare an
     # explicit hx-trigger that didn't include "submit". That overrides
