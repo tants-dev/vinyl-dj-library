@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -15,7 +16,14 @@ load_dotenv()
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
-app = FastAPI(title="Vinyl DJ Library")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="Vinyl DJ Library", lifespan=lifespan)
 app.state.templates = Jinja2Templates(directory=str(WEB_DIR / "templates"))
 app.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
 
@@ -24,11 +32,6 @@ app.include_router(release.router)
 app.include_router(sync.router)
 app.include_router(enrich.router)
 app.include_router(track.router)
-
-
-@app.on_event("startup")
-def on_startup():
-    init_db()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -40,9 +43,9 @@ def index(request: Request, session: Session = Depends(get_session)):
     ).one()
 
     return app.state.templates.TemplateResponse(
+        request,
         "index.html",
         {
-            "request": request,
             "last_synced": None,
             "unenriched_count": unenriched_count,
         },

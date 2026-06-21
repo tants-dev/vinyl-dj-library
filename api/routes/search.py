@@ -43,6 +43,7 @@ def search(request: Request, q: str = "", session: Session = Depends(get_session
             )
 
     return request.app.state.templates.TemplateResponse(
+        request,
         "partials/results.html",
-        {"request": request, "results": results, "query": q},
+        {"results": results, "query": q},
     )

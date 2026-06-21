@@ -46,6 +46,8 @@ vinyl-dj-library/
       style.css
 ```
 
+**Tests:** `tests/` has 47 pytest cases covering everything with real logic — `enrich/camelot.py` (exhaustive Camelot wheel mapping), the `/search` query (matches across track/release/artist/label/catalog number, case-insensitivity, no-match and no-BPM-yet states), `/release/{id}` (happy path + 404), `/track/{id}/bpm-key` (create vs. update-in-place, always stamps `source="manual"`, unrecognized-key handling), `/sync` and `/enrich` (correct messages when no credentials/sources are configured), and the index page's unenriched-track count. Uses an in-memory SQLite DB per test (`tests/conftest.py`, `StaticPool` + dependency override on `get_session`) — never touches the real `vinyl_library.db`. Run with `pytest` (after `pip install -e '.[dev]'`). The stub modules (`sync/discogs_sync.py`, `enrich/sources/beatport.py`, `enrich/sources/getsongbpm.py`, `enrich/audio_analysis.py`) have no tests yet — nothing to verify until they're implemented against real credentials.
+
 **Verified working** (manually tested by booting `uvicorn api.main:app` and curling each route):
 - `GET /` renders the search page, shows "0 tracks need BPM/key" against the empty DB.
 - `GET /search?q=...` queries the local SQLite DB and returns an htmx partial — correctly returns "no matches" against the current empty DB.
@@ -67,3 +69,4 @@ vinyl-dj-library/
 
 - *(2026-06-21)* Repo created with planning docs only. No code.
 - *(2026-06-21)* Pushed to GitHub as a private repo. Built and verified the runnable skeleton: SQLite schema, FastAPI app with search/release/sync/enrich/manual-override routes, htmx-based browser UI (vendored, offline), and stub sync/enrichment modules structured per the target architecture but not yet wired to real API credentials.
+- *(2026-06-21)* Added a pytest suite (47 tests) covering all routes and the Camelot mapping. Replaced deprecated `@app.on_event("startup")` with a `lifespan` context manager and updated `TemplateResponse` calls to the new (request, name, context) argument order — both surfaced as deprecation warnings once tests existed to catch them.

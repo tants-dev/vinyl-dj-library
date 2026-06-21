@@ -21,6 +21,7 @@ def release_detail(
     ).all()
 
     return request.app.state.templates.TemplateResponse(
+        request,
         "release.html",
-        {"request": request, "release": release, "tracks": tracks},
+        {"release": release, "tracks": tracks},
     )
