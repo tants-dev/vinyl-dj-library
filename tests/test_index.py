@@ -36,3 +36,17 @@ def test_search_form_handles_enter_key_via_htmx_not_native_submit(session, clien
     resp = client.get("/")
     assert 'hx-trigger="input changed delay:200ms from:input[name=\'q\']' in resp.text
     assert "submit" in resp.text.split('hx-trigger="')[1].split('"')[0]
+
+
+def test_sync_and_enrich_buttons_have_loading_feedback(session, client):
+    # Sync/enrich can take 60-90s against a real collection with no visual
+    # feedback otherwise -- the button just looks frozen. hx-disabled-elt
+    # grays the button out and hx-indicator shows a spinner+text while the
+    # request is in flight.
+    resp = client.get("/")
+    assert 'hx-post="/sync"' in resp.text
+    assert 'hx-indicator="#sync-spinner"' in resp.text
+    assert 'hx-disabled-elt="this"' in resp.text
+    assert 'id="sync-spinner"' in resp.text
+    assert 'hx-indicator="#enrich-spinner"' in resp.text
+    assert 'id="enrich-spinner"' in resp.text

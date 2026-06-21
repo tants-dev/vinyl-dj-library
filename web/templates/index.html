@@ -8,8 +8,26 @@
       &middot; {{ unenriched_count }} track(s) need BPM/key
     </span>
     <span>
-      <button hx-post="/sync" hx-target="#status-message" hx-swap="innerHTML">Sync Discogs</button>
-      <button hx-post="/enrich" hx-target="#status-message" hx-swap="innerHTML">Enrich BPM/key</button>
+      <button
+        hx-post="/sync"
+        hx-target="#status-message"
+        hx-swap="innerHTML"
+        hx-indicator="#sync-spinner"
+        hx-disabled-elt="this"
+      >Sync Discogs</button>
+      <span id="sync-spinner" class="htmx-indicator">
+        <span class="spinner"></span> Syncing&hellip; this can take a minute
+      </span>
+      <button
+        hx-post="/enrich"
+        hx-target="#status-message"
+        hx-swap="innerHTML"
+        hx-indicator="#enrich-spinner"
+        hx-disabled-elt="this"
+      >Enrich BPM/key</button>
+      <span id="enrich-spinner" class="htmx-indicator">
+        <span class="spinner"></span> Enriching&hellip;
+      </span>
     </span>
   </div>
   <div id="status-message"></div>
