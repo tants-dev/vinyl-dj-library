@@ -7,7 +7,7 @@ Phased build plan for the vinyl DJ library tool. Phases are ordered by dependenc
 Goal: have everything needed to start pulling real data.
 
 - [ ] Discogs personal access token obtained, collection folder ID identified.
-- [ ] GetSongBPM API key obtained.
+- [x] GetSongBPM API key obtained and confirmed working live against the real API.
 - [ ] Beatport API partner application submitted ([open risk, ADR-003](DECISIONS.md#adr-003-tiered-bpmkey-data-strategy--beatport-primary-getsongbpm-fallback-local-audio-analysis-last-resort-manual-override-always-available)) — track approval/denial here.
 - [x] Python project scaffolded (`pyproject.toml`, dependencies, `.env` for secrets, gitignore for `vinyl_library.db` and `.env`).
 - [x] SQLite schema created per [ARCHITECTURE_TARGET.md](ARCHITECTURE_TARGET.md#4-data-model-sqlite) (`db/models.py`, created automatically on app startup).
@@ -27,10 +27,10 @@ Goal: your real vinyl collection lives in the local database.
 Goal: tracks get BPM/key automatically, with provenance tracked.
 
 - [ ] Beatport source adapter (if/once partner access is approved).
-- [x] GetSongBPM source adapter (`enrich/sources/getsongbpm.py`) — implemented and unit-tested against a mocked API; not yet exercised against a real key, since none is provisioned (Phase 0 still open on that).
+- [x] GetSongBPM source adapter (`enrich/sources/getsongbpm.py`) — implemented and verified live against the real API with a real key (deadmau5 - Strobe, Daft Punk - One More Time, both matched correctly). Searches by title only and matches artist client-side (exact, normalized) — the API doesn't support server-side artist filtering despite what the docs imply.
 - [x] Pipeline tries sources in priority order, stores `source` + `confidence` per [ADR-003](DECISIONS.md#adr-003-tiered-bpmkey-data-strategy--beatport-primary-getsongbpm-fallback-local-audio-analysis-last-resort-manual-override-always-available). Also now resilient to a single source erroring mid-batch (logs and moves on instead of aborting the rest of the tracks).
 - [ ] Negative-result caching so dead-end lookups aren't repeated every run.
-- [ ] Run against the real synced collection, eyeball match-rate and accuracy on a sample of known tracks. Blocked on getting a real `GETSONGBPM_API_KEY` and on Phase 1 (Discogs sync) landing first.
+- [ ] Run against the real synced collection, eyeball match-rate and accuracy across the whole library. GetSongBPM itself is confirmed working; this item is now only blocked on Phase 1 (Discogs sync) landing.
 
 ## Phase 3 — Local search & web UI
 

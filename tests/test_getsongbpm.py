@@ -3,7 +3,7 @@ import pytest
 
 from enrich.camelot import to_camelot
 from enrich.sources import getsongbpm
-from enrich.sources.getsongbpm import _parse_key_of
+from enrich.sources.getsongbpm import _artist_matches, _parse_key_of
 
 
 class FakeResponse:
@@ -17,6 +17,16 @@ class FakeResponse:
 
     def json(self):
         return self._json_data
+
+
+def _song(artist, title="Levels", tempo="124", key_of="Am"):
+    return {
+        "id": "xyz",
+        "title": title,
+        "tempo": tempo,
+        "key_of": key_of,
+        "artist": {"name": artist},
+    }
 
 
 def test_is_configured_reflects_env_var(monkeypatch):
@@ -37,38 +47,68 @@ def test_lookup_returns_none_without_api_key(monkeypatch):
     assert getsongbpm.lookup("Aly-Us", "Follow Me") is None
 
 
-def test_lookup_returns_match_on_success(monkeypatch):
+def test_lookup_searches_by_title_only(monkeypatch):
+    # The live API ignores artist filtering server-side (confirmed against
+    # the real endpoint) — searches must be title-only, with the right
+    # artist picked out of the results client-side.
     monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
     captured = {}
 
     def fake_get(url, params, timeout):
         captured["url"] = url
         captured["params"] = params
-        return FakeResponse(
-            {
-                "search": [
-                    {"id": "xyz", "title": "Follow Me", "tempo": "124", "key_of": "Am"}
-                ]
-            }
-        )
+        return FakeResponse({"search": [_song("Aly-Us", "Follow Me")]})
 
     monkeypatch.setattr(httpx, "get", fake_get)
+    getsongbpm.lookup("Aly-Us", "Follow Me")
 
-    match = getsongbpm.lookup("Aly-Us", "Follow Me")
-
-    assert match.bpm == 124.0
-    assert match.key == "A minor"
-    assert match.source == "getsongbpm"
     assert captured["url"] == f"{getsongbpm.API_BASE}/search/"
-    assert captured["params"]["api_key"] == "abc123"
-    assert captured["params"]["type"] == "song"
-    assert captured["params"]["lookup"] == "song:Follow Me artist:Aly-Us"
+    assert captured["params"] == {
+        "api_key": "abc123",
+        "type": "song",
+        "lookup": "Follow Me",
+    }
 
 
-def test_lookup_handles_string_no_results_response(monkeypatch):
+def test_lookup_picks_the_matching_artist_out_of_several_results(monkeypatch):
     monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
     monkeypatch.setattr(
-        httpx, "get", lambda *a, **k: FakeResponse({"search": "No Results"})
+        httpx,
+        "get",
+        lambda *a, **k: FakeResponse(
+            {
+                "search": [
+                    _song("Nonpoint", tempo="100", key_of="C♯"),
+                    _song("Gunplay", tempo="73", key_of="A"),
+                    _song("Avicii", tempo="126", key_of="Cm"),
+                ]
+            }
+        ),
+    )
+
+    match = getsongbpm.lookup("Avicii", "Levels")
+
+    assert match.bpm == 126.0
+    assert match.key == "C minor"
+    assert match.source == "getsongbpm"
+
+
+def test_lookup_returns_none_when_artist_not_among_results(monkeypatch):
+    monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
+    monkeypatch.setattr(
+        httpx,
+        "get",
+        lambda *a, **k: FakeResponse({"search": [_song("Nonpoint"), _song("Gunplay")]}),
+    )
+    assert getsongbpm.lookup("Avicii", "Levels") is None
+
+
+def test_lookup_handles_dict_no_results_response(monkeypatch):
+    # Confirmed against the live API: a miss looks like
+    # {"search": {"error": "no result"}} — a dict, not an empty list.
+    monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
+    monkeypatch.setattr(
+        httpx, "get", lambda *a, **k: FakeResponse({"search": {"error": "no result"}})
     )
     assert getsongbpm.lookup("Nobody", "Nothing") is None
 
@@ -79,23 +119,39 @@ def test_lookup_handles_empty_results_list(monkeypatch):
     assert getsongbpm.lookup("Nobody", "Nothing") is None
 
 
-def test_lookup_returns_none_when_result_has_no_usable_data(monkeypatch):
+def test_lookup_returns_none_when_match_has_no_usable_data(monkeypatch):
     monkeypatch.setenv("GETSONGBPM_API_KEY", "abc123")
     monkeypatch.setattr(
         httpx,
         "get",
-        lambda *a, **k: FakeResponse({"search": [{"id": "xyz", "title": "T"}]}),
+        lambda *a, **k: FakeResponse(
+            {"search": [{"id": "xyz", "title": "T", "artist": {"name": "A"}}]}
+        ),
     )
     assert getsongbpm.lookup("A", "T") is None
 
 
 def test_lookup_raises_on_http_error_status(monkeypatch):
     monkeypatch.setenv("GETSONGBPM_API_KEY", "bad-key")
-    monkeypatch.setattr(
-        httpx, "get", lambda *a, **k: FakeResponse({}, status_code=401)
-    )
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: FakeResponse({}, status_code=401))
     with pytest.raises(httpx.HTTPStatusError):
         getsongbpm.lookup("A", "T")
+
+
+@pytest.mark.parametrize(
+    "wanted, candidate, expected",
+    [
+        ("Avicii", "Avicii", True),
+        ("avicii", "Avicii", True),
+        (" Avicii ", "Avicii", True),
+        ("Daft Punk", "Daft  Punk", True),  # extra internal whitespace
+        ("Air", "Fairground Attraction", False),  # substring false positive
+        ("Avicii", "Nonpoint", False),
+        ("", "Avicii", False),
+    ],
+)
+def test_artist_matches(wanted, candidate, expected):
+    assert _artist_matches(wanted, candidate) is expected
 
 
 @pytest.mark.parametrize(
@@ -111,9 +167,13 @@ def test_lookup_raises_on_http_error_status(monkeypatch):
         ("Gbm", "F# minor"),
         ("Bbm", "Bb minor"),
         ("A#", "Bb major"),
+        # The live API uses the unicode sharp sign, not ASCII '#'.
+        ("C♯", "Db major"),
+        ("G♯m", "G# minor"),
         ("", None),
         (None, None),
         ("Hm", None),  # not a real note
+        ("m", None),  # seen in real responses for tracks with no known key
     ],
 )
 def test_parse_key_of(key_of, expected):

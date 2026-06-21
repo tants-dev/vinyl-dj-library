@@ -2,10 +2,21 @@
 (no partner approval gate, unlike Beatport — see docs/DECISIONS.md ADR-003).
 
 Requires GETSONGBPM_API_KEY (see .env.example). API docs: https://getsongbpm.com/api
+
+The API's /search/ endpoint does NOT filter by artist server-side — an
+"artist" query param is silently ignored, and the documented-looking
+"song:{title} artist:{artist}" combined lookup syntax just searches for
+that literal string as a title and matches nothing. Confirmed by hitting
+the live endpoint directly. The only thing that actually works is a
+title-only search (type=song, lookup={title}), which returns up to ~30
+results across every artist with a matching title — so this adapter
+searches by title and picks the first result whose artist name matches.
+If the right artist isn't within that result window, there's no match;
+that's a real coverage limit of the free API, not a bug here.
 """
 
 import os
-from typing import Optional
+from typing import List, Optional
 
 import httpx
 
@@ -41,11 +52,13 @@ _NOTE_SPELLING = {
 
 def _parse_key_of(key_of: Optional[str]) -> Optional[str]:
     """'C#m' -> 'C# minor', 'Bb' -> 'Bb major', 'Gb' -> 'F# major'. None if
-    missing or not a note we recognize.
+    missing or not a note we recognize. The live API returns the unicode
+    sharp sign '♯' (U+266F) rather than ASCII '#' (e.g. 'G♯m'), confirmed
+    against real responses — normalized here before parsing.
     """
     if not key_of:
         return None
-    raw = key_of.strip()
+    raw = key_of.strip().replace("♯", "#").replace("♭", "b")
     if not raw:
         return None
 
@@ -60,6 +73,21 @@ def _parse_key_of(key_of: Optional[str]) -> Optional[str]:
     return f"{canonical_note} {mode}"
 
 
+def _normalize_artist(name: str) -> str:
+    return " ".join(name.strip().lower().split())
+
+
+def _artist_matches(wanted: str, candidate: str) -> bool:
+    # Exact match only (after case/whitespace normalization) rather than
+    # substring containment — substring matching produces real false
+    # positives (e.g. "Air" matching "Fairground Attraction"), which would
+    # silently attribute the wrong track's BPM/key. A missed match falls
+    # through to the next source or manual entry; a wrong match doesn't.
+    wanted = _normalize_artist(wanted)
+    candidate = _normalize_artist(candidate)
+    return bool(wanted) and wanted == candidate
+
+
 def is_configured() -> bool:
     return bool(os.environ.get("GETSONGBPM_API_KEY"))
 
@@ -71,22 +99,22 @@ def lookup(artist: str, title: str) -> Optional[Match]:
 
     response = httpx.get(
         f"{API_BASE}/search/",
-        params={
-            "api_key": api_key,
-            "type": "song",
-            "lookup": f"song:{title} artist:{artist}",
-        },
+        params={"api_key": api_key, "type": "song", "lookup": title},
         timeout=10,
     )
     response.raise_for_status()
 
     results = response.json().get("search")
     if not isinstance(results, list) or not results:
-        # The API returns {"search": "No Results"} (a string) when nothing
-        # matches, rather than an empty list — guard against indexing that.
+        # No match looks like {"search": {"error": "no result"}} (a dict,
+        # not a list) — confirmed against the live API. Guard against
+        # indexing that instead of assuming a list is always returned.
         return None
 
-    song = results[0]
+    song = _find_artist_match(results, artist)
+    if song is None:
+        return None
+
     tempo = song.get("tempo")
     bpm = float(tempo) if tempo not in (None, "") else None
     key = _parse_key_of(song.get("key_of"))
@@ -95,3 +123,11 @@ def lookup(artist: str, title: str) -> Optional[Match]:
         return None
 
     return Match(bpm=bpm, key=key, source="getsongbpm")
+
+
+def _find_artist_match(results: List[dict], artist: str) -> Optional[dict]:
+    for song in results:
+        candidate = (song.get("artist") or {}).get("name") or ""
+        if _artist_matches(artist, candidate):
+            return song
+    return None

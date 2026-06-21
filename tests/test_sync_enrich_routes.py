@@ -28,3 +28,17 @@ def test_enrich_without_sources_configured_is_a_noop(session, client, monkeypatc
 
     assert resp.status_code == 200
     assert "Enriched 0 track(s)" in resp.text
+    assert "No BPM/key sources are configured" in resp.text
+
+
+def test_enrich_with_a_source_configured_omits_not_configured_caveat(
+    session, client, monkeypatch
+):
+    _clear_credentials(monkeypatch)
+    monkeypatch.setenv("GETSONGBPM_API_KEY", "fake-key-for-this-test")
+
+    resp = client.post("/enrich")
+
+    assert resp.status_code == 200
+    assert "Enriched 0 track(s)" in resp.text
+    assert "No BPM/key sources are configured" not in resp.text
