@@ -1,0 +1,32 @@
+<div class="bpm-key" id="bpm-key-{{ track.id }}">
+  {% if track.bpm_key and track.bpm_key.bpm %}
+    <div class="bpm">{{ "%.0f"|format(track.bpm_key.bpm) }}</div>
+    <div class="key">{{ track.bpm_key.camelot_key or track.bpm_key.key or "" }} &middot; {{ track.bpm_key.source }}</div>
+  {% else %}
+    <div class="key">no BPM/key yet</div>
+  {% endif %}
+  <form
+    class="edit-form"
+    hx-patch="/track/{{ track.id }}/bpm-key"
+    hx-ext="json-enc"
+    hx-target="#bpm-key-{{ track.id }}"
+    hx-swap="outerHTML"
+  >
+    <input
+      type="number"
+      step="0.1"
+      name="bpm"
+      placeholder="BPM"
+      required
+      value="{{ track.bpm_key.bpm if track.bpm_key and track.bpm_key.bpm else '' }}"
+    >
+    <input
+      type="text"
+      name="key"
+      placeholder="Key, e.g. A minor"
+      required
+      value="{{ track.bpm_key.key if track.bpm_key and track.bpm_key.key else '' }}"
+    >
+    <button type="submit">Save</button>
+  </form>
+</div>

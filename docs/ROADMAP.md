@@ -45,7 +45,7 @@ Goal: this is the thing you actually use while DJing.
 
 Goal: cover the records that no database has — white labels, promos, dubplates, bootlegs.
 
-- [x] `PATCH /track/{id}/bpm-key` manual override endpoint (API only — UI inline edit still pending).
+- [x] `PATCH /track/{id}/bpm-key` manual override endpoint, plus an inline edit form on the release detail page (htmx, JSON-encoded submit, swaps in the updated BPM/key/source on save).
 - [ ] Manual values never get clobbered by re-running enrichment.
 - [ ] Local audio analysis module (`librosa`/`essentia`) for needle-drop sample → BPM/key estimate.
 - [ ] UI flow for recording/uploading a short sample for a specific track.

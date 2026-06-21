@@ -81,3 +81,20 @@ def test_patch_with_unrecognized_key_stores_null_camelot(session, client):
 
     stored = session.get(BpmKeyData, track.id)
     assert stored.camelot_key is None
+
+
+def test_patch_from_htmx_returns_html_partial_not_json(session, client):
+    track = make_track(session)
+
+    resp = client.patch(
+        f"/track/{track.id}/bpm-key",
+        json={"bpm": 128.0, "key": "A minor"},
+        headers={"HX-Request": "true"},
+    )
+
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers["content-type"]
+    assert "128" in resp.text
+    assert "8A" in resp.text
+    assert f'id="bpm-key-{track.id}"' in resp.text
+    assert "manual" in resp.text

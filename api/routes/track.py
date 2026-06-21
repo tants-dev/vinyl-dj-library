@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlmodel import Session
 
@@ -18,7 +18,10 @@ class BpmKeyUpdate(BaseModel):
 
 @router.patch("/track/{track_id}/bpm-key")
 def update_bpm_key(
-    track_id: int, update: BpmKeyUpdate, session: Session = Depends(get_session)
+    track_id: int,
+    update: BpmKeyUpdate,
+    request: Request,
+    session: Session = Depends(get_session),
 ):
     track = session.get(Track, track_id)
     if not track:
@@ -42,4 +45,11 @@ def update_bpm_key(
             )
         )
     session.commit()
+
+    if request.headers.get("hx-request"):
+        session.refresh(track)
+        return request.app.state.templates.TemplateResponse(
+            request, "partials/bpm_key_cell.html", {"track": track}
+        )
+
     return {"track_id": track_id, "bpm": update.bpm, "key": update.key, "source": "manual"}
