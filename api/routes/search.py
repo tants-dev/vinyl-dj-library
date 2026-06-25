@@ -25,9 +25,12 @@ def browse_releases(
     if artist:
         query = query.where(Release.artists == artist)
     if genre:
-        # genres is a comma-joined string (e.g. "Electronic, House"); LIKE is
-        # case-insensitive for ASCII on SQLite, which covers genre names fine.
-        query = query.where(Release.genres.contains(genre))
+        # genres and styles are comma-joined strings; match against both so that
+        # selecting a broad genre ("Electronic") or a specific style ("Techno")
+        # both work.
+        query = query.where(
+            Release.genres.contains(genre) | Release.styles.contains(genre)
+        )
     return session.exec(query.order_by(Release.artists, Release.title)).all()
 
 
@@ -40,11 +43,12 @@ def get_filter_options(session: Session) -> dict:
     artists = sorted({r.artists for r in releases if r.artists})
     genre_set = set()
     for r in releases:
-        if r.genres:
-            for g in r.genres.split(","):
-                g = g.strip()
-                if g:
-                    genre_set.add(g)
+        for field in (r.genres, r.styles):
+            if field:
+                for g in field.split(","):
+                    g = g.strip()
+                    if g:
+                        genre_set.add(g)
     return {"years": years, "genres": sorted(genre_set), "artists": artists}
 
 

@@ -15,6 +15,7 @@ router = APIRouter()
 class BpmKeyUpdate(BaseModel):
     bpm: Optional[float] = None
     key: Optional[str] = None
+    source: str = "manual"
 
 
 @router.get("/track/{track_id}", response_class=HTMLResponse)
@@ -49,7 +50,7 @@ def update_bpm_key(
         existing.bpm = update.bpm
         existing.key = update.key
         existing.camelot_key = to_camelot(update.key)
-        existing.source = "manual"
+        existing.source = update.source
         session.add(existing)
     else:
         session.add(
@@ -58,7 +59,7 @@ def update_bpm_key(
                 bpm=update.bpm,
                 key=update.key,
                 camelot_key=to_camelot(update.key),
-                source="manual",
+                source=update.source,
             )
         )
     session.commit()
@@ -69,4 +70,4 @@ def update_bpm_key(
             request, "partials/bpm_key_cell.html", {"track": track}
         )
 
-    return {"track_id": track_id, "bpm": update.bpm, "key": update.key, "source": "manual"}
+    return {"track_id": track_id, "bpm": update.bpm, "key": update.key, "source": update.source}

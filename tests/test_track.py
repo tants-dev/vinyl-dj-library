@@ -83,6 +83,28 @@ def test_patch_with_unrecognized_key_stores_null_camelot(session, client):
     assert stored.camelot_key is None
 
 
+def test_patch_with_explicit_source_stores_that_source(session, client):
+    track = make_track(session)
+
+    resp = client.patch(
+        f"/track/{track.id}/bpm-key",
+        json={"bpm": 130.0, "key": "A minor", "source": "local_analysis"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["source"] == "local_analysis"
+
+    stored = session.get(BpmKeyData, track.id)
+    assert stored.source == "local_analysis"
+
+
+def test_patch_source_defaults_to_manual_when_omitted(session, client):
+    track = make_track(session)
+    resp = client.patch(f"/track/{track.id}/bpm-key", json={"bpm": 128.0, "key": "A minor"})
+    assert resp.json()["source"] == "manual"
+    assert session.get(BpmKeyData, track.id).source == "manual"
+
+
 def test_patch_from_htmx_returns_html_partial_not_json(session, client):
     track = make_track(session)
 

@@ -104,6 +104,28 @@ def test_falls_back_to_release_artist_when_track_has_none(session, monkeypatch):
     assert captured_artist["value"] == "The Real Artist"
 
 
+def test_skips_tracks_that_already_have_bpm_key_data(session, monkeypatch):
+    """The pipeline must not overwrite any existing BpmKeyData row — including
+    rows written by local_analysis or a previous enrichment run, not just manual."""
+    track = _seed_track(session)
+    session.add(BpmKeyData(track_id=track.id, bpm=120.0, key="C major",
+                           camelot_key="8B", source="local_analysis"))
+    session.commit()
+
+    called = {"count": 0}
+
+    def should_not_be_called(artist, title):
+        called["count"] += 1
+
+    source = _FakeSource(configured=True, behavior=should_not_be_called)
+    monkeypatch.setattr(pipeline, "SOURCES_IN_PRIORITY_ORDER", [source])
+
+    enriched = pipeline.enrich_unmatched_tracks(session)
+
+    assert enriched == 0
+    assert called["count"] == 0, "lookup was called for a track that already had data"
+
+
 def test_uses_track_artist_over_release_artist_when_both_present(session, monkeypatch):
     # Compilation case: a track can have its own distinct artist credit.
     session.add(Release(id=98, title="Various Artists Comp", artists="Various"))

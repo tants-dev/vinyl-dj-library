@@ -2,7 +2,11 @@
 <div class="bpm-key" {% if editable %}id="bpm-key-{{ track.id }}"{% endif %}>
   {% if track.bpm_key and track.bpm_key.bpm %}
     <div class="bpm">{{ "%.0f"|format(track.bpm_key.bpm) }}</div>
-    <div class="key">{{ track.bpm_key.camelot_key or track.bpm_key.key or "" }} &middot; {{ track.bpm_key.source }}</div>
+    {% set SOURCE_LABELS = {'getsongbpm': 'GetSongBPM', 'local_analysis': 'Analyzed', 'manual': 'Manual', 'beatport': 'Beatport'} %}
+    <div class="key">
+      {{ track.bpm_key.camelot_key or track.bpm_key.key or "" }}
+      <span class="source-badge source-{{ track.bpm_key.source }}">{{ SOURCE_LABELS.get(track.bpm_key.source, track.bpm_key.source) }}</span>
+    </div>
   {% else %}
     <div class="key">no BPM/key yet</div>
   {% endif %}
@@ -13,6 +17,7 @@
     hx-ext="json-enc"
     hx-target="#bpm-key-{{ track.id }}"
     hx-swap="outerHTML"
+    {% if track.bpm_key and track.bpm_key.bpm %}hx-confirm="Overwrite existing data ({{ track.bpm_key.bpm|int }} BPM, {{ track.bpm_key.camelot_key or track.bpm_key.key }})?"{% endif %}
   >
     <input
       type="number"

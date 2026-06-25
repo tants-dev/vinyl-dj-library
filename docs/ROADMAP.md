@@ -45,11 +45,12 @@ Goal: this is the thing you actually use while DJing.
 
 Goal: cover the records that no database has — white labels, promos, dubplates, bootlegs.
 
-- [x] `PATCH /track/{id}/bpm-key` manual override endpoint, plus an inline edit form on the release detail page (htmx, JSON-encoded submit, swaps in the updated BPM/key/source on save).
-- [ ] Manual values never get clobbered by re-running enrichment.
-- [ ] Local audio analysis module (`librosa`/`essentia`) for needle-drop sample → BPM/key estimate.
-- [ ] UI flow for recording/uploading a short sample for a specific track.
-- [ ] Source/confidence clearly distinguishes manual and analyzed values from database matches in the UI.
+- [x] `PATCH /track/{id}/bpm-key` manual override endpoint, plus an inline edit form on the release detail page (htmx, JSON-encoded submit, swaps in the updated BPM/key/source on save). Endpoint now accepts an optional `source` field (defaults `"manual"`) so clip analysis and tap results can be saved with the correct provenance.
+- [ ] Manual values never get clobbered by re-running enrichment. Current protection is a side effect (pipeline skips any track with an existing `BpmKeyData` row, regardless of `source`), not an explicit guard — a future refactor that adds partial-update enrichment would need to check `source != "manual"` explicitly before overwriting.
+- [x] Local audio analysis module (`librosa`) for needle-drop sample → BPM/key estimate (`enrich/audio_analysis.py`). BPM via `librosa.beat.beat_track(start_bpm=120)` (biased toward DJ tempos to reduce half/double-time ambiguity). Key via Krumhansl-Schmuckler chroma correlation over 24 pitch classes.
+- [x] UI flow for recording/uploading a short sample for a specific track — full clip-analysis page built into `/analyze` (the renamed tap-BPM page), recording 20–30s of audio via Web Audio API `ScriptProcessorNode` → raw PCM → in-browser WAV encoder → `POST /analyze-clip`. Editable BPM result with ÷2/×2 buttons to correct half/double-time errors. Also available standalone (no track pre-selected) and from the release page via "Analyze this track" link.
+- [x] Source/confidence clearly distinguishes manual and analyzed values from database matches in the UI — colour-coded source badges on every BPM/key cell (`getsongbpm` blue, `local_analysis` purple, `manual` amber, `beatport` orange). Overwrite confirmation (`hx-confirm` on manual edit form, `window.confirm()` in clip-analysis JS) when saving over existing data.
+- [ ] Finer-grained source provenance on the Live BPM page: manual typing → `"manual"`, tap tempo → `"tapped"` (new source value), clip recording → `"local_analysis"` (already correct). Implementation: set `save-source` to `"tapped"` in `tap-bpm.js` when "Use this BPM →" is clicked (currently writes `"manual"`); listen for `input` on the shared BPM field to reset source back to `"manual"` when the user overrides a value by hand; add a `"tapped"` entry to `SOURCE_LABELS` in `bpm_key_cell.html` and extend the badge CSS.
 
 ## Phase 5 — Polish & DJ-specific workflow features
 
@@ -60,7 +61,8 @@ Goal: make it genuinely nice to use at the decks, not just functional.
 - [x] "Last synced" status visible in UI — was hardcoded to `None` (always showed "Not synced yet" even after a real sync); now reads `max(Release.discogs_synced_at)` across the collection. Confirmed live against the real synced collection.
 - [x] Sync/enrich triggerable from the UI — the "Sync Discogs" / "Enrich BPM/key" buttons have worked since the skeleton; both are now fully functional against real data.
 - [ ] Large-type, glanceable layout tuned for tablet-at-the-decks use — works fine on a 768px tablet viewport today; not yet deliberately tuned for legibility-at-a-glance.
-- [x] Live tap-tempo BPM counter (`GET /tap-bpm`, reachable from a nav link on every page) — for records with no data at all, the fastest manual way to get a usable BPM while standing at the decks: tap or press space in time with the beat, rolling average of the last 8 taps, auto-resets after a 2s gap. Verified live with simulated precisely-timed taps (500ms apart → 119.6 BPM against an exact target of 120, within normal timing jitter). Page has a "Currently playing" section stubbed as "coming soon" — reserved for the planned mic-based live analysis (see stretch ideas below); both are meant to live on the same page, mic analysis on top, tap counter underneath.
+- [x] Live tap-tempo BPM counter (`GET /analyze`) — for records with no data at all, tap or press space in time with the beat, rolling average of last 8 taps, auto-resets after 2s gap. Now unified with clip analysis on the same page (see below). When arriving via `?track_id=X`, page shows track title + artist as "Now analyzing" header and both tools can save directly to that track.
+- [x] Clip analysis and tap tempo unified on one page (`/analyze`, formerly `/tap-bpm`) with a shared track context: "Now analyzing: [Track] — [Artist]" header when a track is pre-selected; Record Clip and Tap Tempo panels side by side; shared "Save to track" section at the bottom with BPM + Key fields (auto-populated by whichever tool runs), a direct save button for the preset track, and a search field for any other track. "Use this BPM →" button on the tap panel feeds its result into the shared save section. Source set to `local_analysis` for clip results, `manual` for tap/typed values.
 
 ## Stretch / future ideas (not committed)
 

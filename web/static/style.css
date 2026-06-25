@@ -12,7 +12,7 @@ body {
   color: var(--fg);
   max-width: 900px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 4rem 1.5rem 1.5rem;
 }
 
 .quit-btn {
@@ -92,15 +92,15 @@ h1 {
   font-weight: 700;
   letter-spacing: 0.1em;
   padding: 2rem;
-  background: var(--accent);
-  color: #111;
+  background: #F06000;
+  color: #fff;
   border: none;
   border-radius: 12px;
   cursor: pointer;
 }
 
 .tap-button:active {
-  background: #17a64a;
+  background: #C74D00;
 }
 
 .tap-reset {
@@ -267,6 +267,12 @@ input[type="search"] {
 .result-meta {
   flex: 1;
   min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+a.result-meta:hover .track-title {
+  color: var(--accent);
 }
 
 .result-meta .track-title {
@@ -335,3 +341,433 @@ input[type="search"] {
   text-align: center;
   margin-top: 3rem;
 }
+
+/* Source provenance badges */
+.source-badge {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-left: 0.25rem;
+}
+.source-getsongbpm   { background: #0e2033; color: #60a5fa; }
+.source-local_analysis { background: #1e1033; color: #c084fc; }
+.source-manual       { background: #2a2008; color: #fbbf24; }
+.source-beatport     { background: #2a1008; color: #fb923c; }
+
+/* Clip analysis section */
+.clip-record-btn {
+  width: 100%;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 1.25rem;
+  background: #c0392b;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.clip-record-btn.recording {
+  background: #e74c3c;
+  animation: pulse-record 1s ease-in-out infinite;
+}
+.clip-record-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@keyframes pulse-record {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
+}
+
+.clip-timer {
+  font-size: 1rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+}
+
+.clip-result {
+  background: #111;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+.clip-bpm-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.clip-result .clip-bpm {
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1;
+  width: 5rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid #444;
+  color: var(--fg);
+  text-align: center;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+.clip-result .clip-bpm:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+.clip-result .clip-bpm::-webkit-inner-spin-button,
+.clip-result .clip-bpm::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+.clip-bpm-adj {
+  background: #1c1c1c;
+  border: 1px solid #444;
+  color: var(--fg);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.clip-bpm-adj:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.clip-result .clip-key {
+  color: var(--accent);
+  font-size: 1rem;
+  margin-top: 0.25rem;
+}
+.clip-result .clip-confidence {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+.clip-result .clip-conf-warn {
+  color: #fbbf24;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+.clip-result .clip-key-low-conf {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.clip-assign {
+  margin-top: 1rem;
+  text-align: left;
+}
+.clip-assign-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+.clip-assign input[type="search"] {
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+}
+.clip-track-results {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.clip-track-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1c1c1c;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  gap: 0.75rem;
+}
+.clip-track-item .clip-track-name {
+  font-size: 0.9rem;
+  flex: 1;
+  min-width: 0;
+}
+.clip-track-item .clip-track-name small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.clip-assign-btn {
+  background: var(--accent);
+  color: #111;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.clip-assign-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.clip-clear-btn {
+  margin-top: 0.75rem;
+  background: none;
+  border: 1px solid #444;
+  color: var(--muted);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+}
+.clip-clear-btn:hover {
+  border-color: #e88;
+  color: #e88;
+}
+
+.clip-error {
+  color: #e88;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.analyse-track-btn {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.3rem 0.75rem;
+  text-decoration: none;
+}
+.analyse-track-btn:hover {
+  background: rgba(29,185,84,0.1);
+}
+.analyse-row-btn {
+  flex-shrink: 0;
+  align-self: flex-end;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.analyse-row-btn:hover {
+  background: rgba(29,185,84,0.1);
+}
+
+/* Analysing header — shown when arriving with ?track_id= */
+.release-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.release-cover-art {
+  width: 100px;
+  height: 100px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.release-header-text {
+  flex: 1;
+  min-width: 0;
+}
+.release-header-text h1 {
+  margin-top: 0;
+}
+
+.analysing-header {
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem 0.75rem 0.75rem;
+  background: #1c1c1c;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+}
+.analysing-art {
+  width: 72px;
+  height: 72px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.analysing-header-text {
+  flex: 1;
+  min-width: 0;
+}
+.analysing-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.analysing-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 0.15rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.analysing-artist {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.analysing-save-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.analysing-bpm-input,
+.analysing-key-input {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid #555;
+  border-radius: 6px;
+  color: var(--fg);
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.4rem 0.3rem;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.analysing-bpm-input::-webkit-inner-spin-button,
+.analysing-bpm-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.analysing-bpm-input { width: 3.8rem; }
+.analysing-key-input { width: 3.8rem; }
+.analysing-bpm-input:focus,
+.analysing-key-input:focus { border-color: var(--accent); }
+.analysing-save-btn {
+  flex-shrink: 0;
+  padding: 0.5rem 1.1rem;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.analysing-save-btn:hover { background: #17a349; }
+.analysing-save-btn:disabled { opacity: 0.5; cursor: default; }
+
+.analysing-existing {
+  font-size: 0.75rem;
+  color: var(--accent);
+  margin-top: 0.3rem;
+  opacity: 0.8;
+}
+
+/* Two-column tool grid (record + tap side by side) */
+.bpm-tools-grid {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.bpm-tools-grid .bpm-tool-section {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Save section — left-aligned, shared between both tools */
+.save-section {
+  text-align: left;
+}
+.save-bpm-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+.save-field-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.3rem;
+}
+.save-bpm-input {
+  width: 6rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: var(--fg);
+  padding: 0.4rem 0.6rem;
+  -moz-appearance: textfield;
+}
+.save-bpm-input::-webkit-inner-spin-button,
+.save-bpm-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+.save-bpm-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+@keyframes save-input-flash {
+  0%   { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+  100% { border-color: #444; box-shadow: none; }
+}
+.save-input-flash {
+  animation: save-input-flash 0.8s ease-out forwards;
+}
+.save-key-input {
+  width: 100%;
+  font-size: 1rem;
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: var(--fg);
+  padding: 0.4rem 0.6rem;
+  box-sizing: border-box;
+}
+.save-key-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Tap "Use this BPM" button */
+.tap-use-btn {
+  margin-top: 0.75rem;
+  width: 100%;
+  background: none;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.tap-use-btn:hover {
+  background: rgba(29, 185, 84, 0.1);
+}
+
+.hidden { display: none !important; }

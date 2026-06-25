@@ -65,15 +65,26 @@ def test_track_detail_bpm_key_id_not_duplicated(session, client):
     assert resp.text.count(f'id="bpm-key-{t1.id}"') == 1
 
 
-def test_track_detail_no_info_is_clickable_except_nav_links(session, client):
-    # Only the "back to search" link and the global "Tap BPM" nav link
-    # (present on every page) should be clickable -- none of the Discogs
-    # metadata (label, year, format, genres, styles) should be.
-    t1, _ = _seed(session)
+def test_track_detail_no_discogs_metadata_is_clickable(session, client):
+    # Discogs metadata (label, year, format, genres, styles) must not be
+    # wrapped in <a> tags. The only links allowed are:
+    #   - "← back to search" (/)
+    #   - global "Analyse" nav link (/tap-bpm)
+    #   - "Analyse this track" button on the featured track (/tap-bpm?track_id=…)
+    #   - tracklist rows linking each track to its own detail page (/track/…)
+    t1, t2 = _seed(session)
     resp = client.get(f"/track/{t1.id}")
 
-    anchors = re.findall(r'<a\b[^>]*href="([^"]+)"', resp.text)
-    assert sorted(anchors) == ["/", "/tap-bpm"]
+    anchors = set(re.findall(r'<a\b[^>]*href="([^"]+)"', resp.text))
+    expected = {
+        "/",                              # back to search
+        "/tap-bpm",                       # global nav
+        f"/tap-bpm?track_id={t1.id}",    # Analyse this track (featured) + tracklist row
+        f"/tap-bpm?track_id={t2.id}",    # Analyse button on tracklist row
+        f"/track/{t1.id}",               # featured track row
+        f"/track/{t2.id}",               # other tracklist rows
+    }
+    assert anchors == expected
 
 
 def test_track_detail_not_found_returns_404(session, client):

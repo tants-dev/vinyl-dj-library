@@ -9,28 +9,37 @@
       {% set track = featured_track %}
       {% set editable = true %}
       {% include "partials/bpm_key_cell.html" %}
+      <a href="/tap-bpm?track_id={{ featured_track.id }}" class="analyse-track-btn">Analyse this track</a>
     </div>
     <h2 style="margin-top:2rem;color:var(--muted);font-size:1rem;">Full release</h2>
   {% endif %}
 
-  <h1>{{ release.title }} &mdash; {{ release.artists }}</h1>
-  <p style="color:var(--muted);">
-    <span>{{ release.label or "" }} {{ release.catalog_number or "" }}</span>
-    {% if release.year %} &middot; <span>{{ release.year }}</span>{% endif %}
-    {% if release.format %} &middot; <span>{{ release.format }}</span>{% endif %}
-    {% if release.genres %} &middot; <span>{{ release.genres }}</span>{% endif %}
-    {% if release.styles %} &middot; <span>{{ release.styles }}</span>{% endif %}
-  </p>
+  <div class="release-header">
+    {% if release.cover_image_url %}
+    <img src="{{ release.cover_image_url }}" class="release-cover-art" alt="">
+    {% endif %}
+    <div class="release-header-text">
+      <h1>{{ release.title }} &mdash; {{ release.artists }}</h1>
+      <p style="color:var(--muted);">
+        <span>{{ release.label or "" }} {{ release.catalog_number or "" }}</span>
+        {% if release.year %} &middot; <span>{{ release.year }}</span>{% endif %}
+        {% if release.format %} &middot; <span>{{ release.format }}</span>{% endif %}
+        {% if release.genres %} &middot; <span>{{ release.genres }}</span>{% endif %}
+        {% if release.styles %} &middot; <span>{{ release.styles }}</span>{% endif %}
+      </p>
+    </div>
+  </div>
 
   <div id="results">
     {% for track in tracks %}
       <div class="result-row">
-        <div class="result-meta">
+        <a href="/track/{{ track.id }}" class="result-meta">
           <div class="track-title">{{ track.position }} &middot; {{ track.title }}</div>
           <div class="release-title">{{ track.artists or "" }}</div>
-        </div>
+        </a>
         {% set editable = (not featured_track) or (track.id != featured_track.id) %}
         {% include "partials/bpm_key_cell.html" %}
+        <a href="/tap-bpm?track_id={{ track.id }}" class="analyse-row-btn" title="Analyse this track">Analyse</a>
       </div>
     {% endfor %}
   </div>

@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+import time
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Request
@@ -11,7 +12,7 @@ from sqlmodel import Session, func, select
 
 from db.models import Release, Track
 from db.session import get_session, init_db
-from api.routes import enrich, release, search, sync, system, tap_bpm, track
+from api.routes import analyze, enrich, release, search, sync, system, tap_bpm, track
 from api.routes.search import browse_releases, get_filter_options
 
 load_dotenv()
@@ -27,8 +28,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Vinyl DJ Library", lifespan=lifespan)
 app.state.templates = Jinja2Templates(directory=str(WEB_DIR / "templates"))
+app.state.templates.env.globals["startup_ts"] = int(time.time())
 app.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
 
+app.include_router(analyze.router)
 app.include_router(search.router)
 app.include_router(release.router)
 app.include_router(sync.router)

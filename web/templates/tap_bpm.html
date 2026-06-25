@@ -1,21 +1,98 @@
 {% extends "base.html" %}
 {% block content %}
   <p><a href="/" style="color:var(--muted);">&larr; back to search</a></p>
+
+  {% if preset_track %}
+  <div class="analysing-header">
+    {% if preset_track.cover_art %}
+    <img src="{{ preset_track.cover_art }}" class="analysing-art" alt="">
+    {% endif %}
+    <div class="analysing-header-text">
+      <div class="analysing-label">Now analysing</div>
+      <div class="analysing-title">{{ preset_track.title }}</div>
+      <div class="analysing-artist">{{ preset_track.artist }}</div>
+      {% if preset_track.existing_bpm %}
+      <div class="analysing-existing">Currently saved: {{ preset_track.existing_bpm|int }} BPM{% if preset_track.existing_key %} &middot; {{ preset_track.existing_key }}{% endif %}</div>
+      {% endif %}
+    </div>
+    <div class="analysing-save-row">
+      <input type="number" step="1" id="save-bpm-input" class="analysing-bpm-input" placeholder="BPM" min="0" max="300">
+      <input type="text" id="save-key-input" class="analysing-key-input" placeholder="Key">
+      <button id="clip-preset-btn" class="analysing-save-btn" type="button">Save</button>
+    </div>
+  </div>
+
+  <div id="clip-preset-track"
+       data-id="{{ preset_track.id }}"
+       data-title="{{ preset_track.title }}"
+       data-artist="{{ preset_track.artist }}"
+       {% if preset_track.existing_bpm %}data-existing-bpm="{{ preset_track.existing_bpm }}"{% endif %}
+       {% if preset_track.existing_key %}data-existing-key="{{ preset_track.existing_key }}"{% endif %}
+       style="display:none"></div>
+  {% else %}
   <h1>Live BPM</h1>
+  {% endif %}
 
-  <section class="bpm-tool-section">
-    <h2>Currently playing</h2>
-    <p class="empty-state">Mic-based live analysis coming soon.</p>
+  <input type="hidden" id="save-source" value="manual">
+
+  <div class="bpm-tools-grid">
+
+    <section class="bpm-tool-section">
+      <h2>Record clip</h2>
+      <p class="tap-hint" style="text-align:left;margin-top:0;">20–30 seconds &middot; gets BPM and key</p>
+
+      <div id="clip-result" class="clip-result hidden">
+        <div class="clip-bpm-row">
+          <button id="clip-bpm-half" class="clip-bpm-adj" type="button">&divide;2</button>
+          <input type="number" step="0.1" class="clip-bpm" id="clip-bpm-display" placeholder="—">
+          <button id="clip-bpm-double" class="clip-bpm-adj" type="button">&times;2</button>
+        </div>
+        <div class="clip-key" id="clip-key-display"></div>
+        <div class="clip-confidence" id="clip-conf-display"></div>
+        <button id="clip-clear-btn" class="clip-clear-btn" type="button">&#10005; Clear</button>
+      </div>
+
+      <button id="clip-record-btn" class="clip-record-btn" type="button">&#9679; Record</button>
+      <div id="clip-timer" class="clip-timer hidden">0s</div>
+      <div id="clip-error" class="clip-error hidden"></div>
+    </section>
+
+    <section class="bpm-tool-section">
+      <h2>Tap tempo</h2>
+      <p class="tap-hint" style="text-align:left;margin-top:0;">BPM only &middot; quick cross-check</p>
+
+      <div id="tap-bpm-value" class="tap-bpm-value">&mdash;</div>
+      <div id="tap-count" class="tap-count">0 taps</div>
+      <button id="tap-button" class="tap-button" type="button">TAP</button>
+      <button id="tap-reset" class="tap-reset" type="button">Reset</button>
+      <button id="tap-use-btn" class="tap-use-btn hidden" type="button">Use this BPM &rarr;</button>
+      <p class="tap-hint">Tap (or press space) in time with the beat. 2s gap starts a new count.</p>
+    </section>
+
+  </div>
+
+  <section class="bpm-tool-section save-section">
+    {% if not preset_track %}
+    <h2>Save to track</h2>
+    <div class="save-bpm-row">
+      <div>
+        <label class="save-field-label" for="save-bpm-input">BPM</label>
+        <input type="number" step="1" id="save-bpm-input" class="save-bpm-input" placeholder="—">
+      </div>
+      <div style="flex:1;">
+        <label class="save-field-label" for="save-key-input">Key</label>
+        <input type="text" id="save-key-input" class="save-key-input" placeholder="e.g. 8A">
+      </div>
+    </div>
+    {% endif %}
+
+    <div id="clip-search-section">
+      <p class="clip-assign-label">{{ 'Save to a different track:' if preset_track else 'Save to track:' }}</p>
+      <input type="search" id="clip-track-search" placeholder="Search track or artist&hellip;" autocomplete="off">
+      <div id="clip-track-results" class="clip-track-results"></div>
+    </div>
   </section>
 
-  <section class="bpm-tool-section">
-    <h2>Tap tempo</h2>
-    <div id="tap-bpm-value" class="tap-bpm-value">&mdash;</div>
-    <div id="tap-count" class="tap-count">0 taps</div>
-    <button id="tap-button" class="tap-button" type="button">TAP</button>
-    <button id="tap-reset" class="tap-reset" type="button">Reset</button>
-    <p class="tap-hint">Tap the button (or press space) in time with the beat. A gap of more than 2 seconds starts a new count.</p>
-  </section>
-
-  <script src="/static/tap-bpm.js"></script>
+  <script src="/static/tap-bpm.js?v={{ startup_ts }}"></script>
+  <script src="/static/clip-analysis.js?v={{ startup_ts }}"></script>
 {% endblock %}
